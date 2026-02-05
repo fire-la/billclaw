@@ -5,7 +5,7 @@
  * and all components are registered correctly.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import billclawPlugin from "./index.ts";
 
 // Mock OpenClaw API
