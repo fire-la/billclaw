@@ -17,7 +17,7 @@ export interface SyncServiceState {
 /**
  * Calculate next sync time based on sync frequency
  */
-function calculateNextSync(frequency: SyncFrequency, lastSync?: Date): Date {
+export function calculateNextSync(frequency: SyncFrequency, lastSync?: Date): Date {
   const now = new Date();
   const base = lastSync || now;
 
@@ -53,7 +53,7 @@ function calculateNextSync(frequency: SyncFrequency, lastSync?: Date): Date {
 /**
  * Check if an account is due for sync
  */
-function isDueForSync(account: AccountConfig): boolean {
+export function isDueForSync(account: AccountConfig): boolean {
   if (!account.enabled || !account.lastSync) {
     return true;
   }
