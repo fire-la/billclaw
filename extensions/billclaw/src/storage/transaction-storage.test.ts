@@ -22,7 +22,7 @@ import {
   type Transaction,
   type SyncState,
   type AccountRegistry,
-} from "./transaction-storage.js";
+} from "./transaction-storage.ts";
 
 // Mock transaction for use in tests
 const mockTransaction: Transaction = {

@@ -10,7 +10,7 @@
 
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { Type } from "@sinclair/typebox";
-import { billclawConfigSchema } from "./config.js";
+import { billclawConfigSchema } from "./config.ts";
 
 // ============================================================================
 // Plugin Definition
