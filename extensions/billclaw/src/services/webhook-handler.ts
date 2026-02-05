@@ -2,7 +2,7 @@
  * Webhook handler - handles incoming webhooks from Plaid and Gmail
  */
 
-import type { ServiceContext, HttpRequest, HttpResponse } from "@openclaw/plugin-sdk";
+import type { ServiceContext, HttpRequest, HttpResponse } from "../../openclaw-types";
 
 export interface WebhookPayload {
   event: string;
@@ -47,7 +47,7 @@ export async function webhookHandler(context: ServiceContext): Promise<void> {
  */
 async function handlePlaidWebhook(
   request: HttpRequest,
-  context: ServiceContext
+  context?: ServiceContext
 ): Promise<HttpResponse> {
   try {
     // TODO: Implement Plaid webhook handling
@@ -64,7 +64,7 @@ async function handlePlaidWebhook(
       body: { received: true },
     };
   } catch (error) {
-    context.logger.error("Plaid webhook error:", error);
+    context?.logger.error("Plaid webhook error:", error);
     return {
       status: 500,
       body: { error: "Webhook processing failed" },
@@ -79,7 +79,7 @@ async function handlePlaidWebhook(
  */
 async function handleGmailWebhook(
   request: HttpRequest,
-  context: ServiceContext
+  context?: ServiceContext
 ): Promise<HttpResponse> {
   try {
     // TODO: Implement Gmail webhook handling
@@ -95,7 +95,7 @@ async function handleGmailWebhook(
       body: { received: true },
     };
   } catch (error) {
-    context.logger.error("Gmail webhook error:", error);
+    context?.logger.error("Gmail webhook error:", error);
     return {
       status: 500,
       body: { error: "Webhook processing failed" },
@@ -110,7 +110,7 @@ async function handleGmailWebhook(
  */
 async function handleTestWebhook(
   request: HttpRequest,
-  context: ServiceContext
+  context?: ServiceContext
 ): Promise<HttpResponse> {
   try {
     // TODO: Implement test webhook

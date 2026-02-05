@@ -97,10 +97,39 @@ export const StorageConfigSchema = z.object({
   encryption: z.object({
     enabled: z.boolean().default(false),
     keyPath: z.string().optional().describe("Path to encryption key"),
+  }).default({
+    enabled: false,
   }),
+}).default({
+  path: "~/.openclaw/billclaw",
+  format: "json" as const,
+  encryption: {
+    enabled: false,
+  },
 });
 
 export type StorageConfig = z.infer<typeof StorageConfigSchema>;
+
+/**
+ * Plaid environment options
+ */
+export enum PlaidEnvironment {
+  Sandbox = "sandbox",
+  Development = "development",
+  Production = "production",
+}
+
+/**
+ * Plaid configuration
+ */
+export const PlaidConfigSchema = z.object({
+  clientId: z.string().optional().describe("Plaid client ID"),
+  secret: z.string().optional().describe("Plaid secret"),
+  environment: z.nativeEnum(PlaidEnvironment).default(PlaidEnvironment.Sandbox).describe("Plaid API environment"),
+  webhookUrl: z.string().url().optional().describe("Webhook URL for Plaid events"),
+});
+
+export type PlaidConfig = z.infer<typeof PlaidConfigSchema>;
 
 /**
  * Main billclaw configuration
@@ -108,12 +137,37 @@ export type StorageConfig = z.infer<typeof StorageConfigSchema>;
 export const BillclawConfigSchema = z.object({
   accounts: z.array(AccountConfigSchema).default([]).describe("Configured bank accounts"),
   webhooks: z.array(WebhookConfigSchema).default([]).describe("Webhook endpoints"),
-  storage: StorageConfigSchema.default({}).describe("Storage settings"),
+  storage: StorageConfigSchema.describe("Storage settings"),
   sync: z.object({
     defaultFrequency: z.nativeEnum(SyncFrequency).default(SyncFrequency.Daily),
     retryOnFailure: z.boolean().default(true),
     maxRetries: z.number().int().min(0).max(5).default(3),
+  }).default({
+    defaultFrequency: SyncFrequency.Daily,
+    retryOnFailure: true,
+    maxRetries: 3,
   }),
+  plaid: PlaidConfigSchema.default({
+    environment: PlaidEnvironment.Sandbox,
+  }).describe("Plaid API configuration"),
+}).default({
+  accounts: [],
+  webhooks: [],
+  sync: {
+    defaultFrequency: SyncFrequency.Daily,
+    retryOnFailure: true,
+    maxRetries: 3,
+  },
+  storage: {
+    path: "~/.openclaw/billclaw",
+    format: "json",
+    encryption: {
+      enabled: false,
+    },
+  },
+  plaid: {
+    environment: PlaidEnvironment.Sandbox,
+  },
 });
 
 export type BillclawConfig = z.infer<typeof BillclawConfigSchema>;

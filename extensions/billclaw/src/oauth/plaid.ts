@@ -2,7 +2,14 @@
  * Plaid OAuth handler - implements Plaid Link flow
  */
 
-import type { OAuthContext } from "@openclaw/plugin-sdk";
+import type { OAuthContext } from "../../openclaw-types";
+import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
+import type {
+  LinkTokenCreateRequest,
+  LinkTokenCreateResponse,
+  ItemPublicTokenExchangeRequest,
+  ItemPublicTokenExchangeResponse,
+} from "plaid";
 
 export interface PlaidOAuthResult {
   success: boolean;
@@ -11,45 +18,184 @@ export interface PlaidOAuthResult {
   error?: string;
 }
 
+export interface CreateLinkTokenResult {
+  success: boolean;
+  linkToken?: string;
+  error?: string;
+}
+
 /**
- * Handle Plaid Link OAuth flow
- *
- * This integrates Plaid Link (https://plaid.com/docs/link/)
- * for secure bank account connection.
+ * Get Plaid configuration from OpenClaw config
  */
-export async function plaidOAuth(context: OAuthContext): Promise<PlaidOAuthResult> {
-  // TODO: Implement Plaid Link OAuth
-  // 1. Generate Link token (POST /link/token/create)
-  // 2. Serve Plaid Link frontend (or integrate with OpenClaw web UI)
-  // 3. Handle Link success callback (receives public_token)
-  // 4. Exchange public_token for access_token (POST /item/public_token/exchange)
-  // 5. Store access_token encrypted in account config
-  // 6. Return itemId for reference
+function getPlaidConfig(context: OAuthContext): {
+  clientId: string;
+  secret: string;
+  environment: string;
+} {
+  const config = context.config.get("billclaw") as any;
+  const plaidConfig = config?.plaid || {};
+
+  const clientId = plaidConfig.clientId || process.env.PLAID_CLIENT_ID;
+  const secret = plaidConfig.secret || process.env.PLAID_SECRET;
+  const environment = plaidConfig.environment || "sandbox";
+
+  if (!clientId || !secret) {
+    throw new Error(
+      "Plaid credentials not configured. Set PLAID_CLIENT_ID and PLAID_SECRET environment variables, or configure them in billclaw settings."
+    );
+  }
+
+  const plaidEnvMap: Record<string, string> = {
+    sandbox: PlaidEnvironments.sandbox,
+    development: PlaidEnvironments.development,
+    production: PlaidEnvironments.production,
+  };
 
   return {
-    success: false,
-    error: "Not implemented yet",
+    clientId,
+    secret,
+    environment: plaidEnvMap[environment] || PlaidEnvironments.sandbox,
   };
+}
+
+/**
+ * Create Plaid Link token for initializing Link frontend
+ */
+export async function createLinkToken(
+  context: OAuthContext,
+  accountId?: string
+): Promise<CreateLinkTokenResult> {
+  try {
+    const { clientId, secret, environment } = getPlaidConfig(context);
+
+    const configuration = new Configuration({
+      basePath: environment,
+      baseOptions: {
+        headers: {
+          "PLAID-CLIENT-ID": clientId,
+          "PLAID-SECRET": secret,
+        },
+      },
+    });
+
+    const plaidClient = new PlaidApi(configuration);
+
+    const request: LinkTokenCreateRequest = {
+      user: {
+        client_user_id: accountId || "user_" + Date.now(),
+      },
+      client_name: "billclaw",
+      products: ["transactions" as any],
+      country_codes: ["US" as any],
+      language: "en",
+    };
+
+    const axiosResponse = await plaidClient.linkTokenCreate(request);
+    const response: LinkTokenCreateResponse = axiosResponse.data;
+
+    context.logger.info("Plaid Link token created successfully");
+
+    return {
+      success: true,
+      linkToken: response.link_token,
+    };
+  } catch (error) {
+    context.logger.error("Failed to create Plaid Link token:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
 
 /**
  * Exchange Plaid public token for access token
  */
-async function exchangePublicToken(publicToken: string): Promise<string> {
-  // TODO: Call Plaid API
-  // POST /item/public_token/exchange
-  // { public_token: "public-sandbox-..." }
-  // Returns { access_token: "access-sandbox-...", item_id: "..." }
-  return "";
+export async function exchangePublicToken(
+  context: OAuthContext,
+  publicToken: string
+): Promise<{ accessToken: string; itemId: string } | null> {
+  try {
+    const { clientId, secret, environment } = getPlaidConfig(context);
+
+    const configuration = new Configuration({
+      basePath: environment,
+      baseOptions: {
+        headers: {
+          "PLAID-CLIENT-ID": clientId,
+          "PLAID-SECRET": secret,
+        },
+      },
+    });
+
+    const plaidClient = new PlaidApi(configuration);
+
+    const request: ItemPublicTokenExchangeRequest = {
+      public_token: publicToken,
+    };
+
+    const axiosResponse = await plaidClient.itemPublicTokenExchange(request);
+    const response: ItemPublicTokenExchangeResponse = axiosResponse.data;
+
+    context.logger.info("Plaid public token exchanged successfully");
+
+    return {
+      accessToken: response.access_token,
+      itemId: response.item_id,
+    };
+  } catch (error) {
+    context.logger.error("Failed to exchange Plaid public token:", error);
+    return null;
+  }
 }
 
 /**
- * Create Plaid Link token
+ * Handle Plaid Link OAuth flow
+ *
+ * This integrates Plaid Link (https://plaid.com/docs/link/)
+ * for secure bank account connection.
+ *
+ * Flow:
+ * 1. Create Link token
+ * 2. Serve Plaid Link frontend (or provide token for external UI)
+ * 3. Handle Link success callback (receives public_token)
+ * 4. Exchange public_token for access_token
+ * 5. Return itemId and accessToken for storage
  */
-async function createLinkToken(accountId?: string): Promise<string> {
-  // TODO: Call Plaid API
-  // POST /link/token/create
-  // { client_id, secret, client_name, user, products: ["transactions"], ... }
-  // Returns { link_token: "link-sandbox-..." }
-  return "";
+export async function plaidOAuth(
+  context: OAuthContext,
+  publicToken?: string
+): Promise<PlaidOAuthResult> {
+  if (!publicToken) {
+    // No public token provided - create Link token for initializing Link
+    const result = await createLinkToken(context);
+
+    if (!result.success || !result.linkToken) {
+      return {
+        success: false,
+        error: result.error || "Failed to create Link token",
+      };
+    }
+
+    // Return the Link token - caller will use it to render Plaid Link
+    return {
+      success: true,
+    };
+  }
+
+  // Public token provided - exchange for access token
+  const exchangeResult = await exchangePublicToken(context, publicToken);
+
+  if (!exchangeResult) {
+    return {
+      success: false,
+      error: "Failed to exchange public token for access token",
+    };
+  }
+
+  return {
+    success: true,
+    itemId: exchangeResult.itemId,
+    accessToken: exchangeResult.accessToken,
+  };
 }

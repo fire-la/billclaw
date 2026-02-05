@@ -8,6 +8,11 @@ dist/
 build/
 *.tsbuildinfo
 
+# Compiled JS in src directory (from emitDeclarationOnly)
+*.js
+*.js.map
+*.d.ts.map
+
 # Environment files
 .env
 .env.local

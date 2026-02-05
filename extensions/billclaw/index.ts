@@ -8,14 +8,20 @@
  * @license MIT
  */
 
-import type { Plugin } from "@openclaw/plugin-sdk";
+import type {
+  Plugin,
+  CLIRegistry,
+  ToolRegistry,
+  OAuthRegistry,
+  ServiceRegistry,
+} from "./openclaw-types";
 
 export const billclawPlugin: Plugin = {
   name: "@fire-zu/billclaw",
   version: "0.0.1",
 
   // Register CLI commands
-  async registerCLI(cli) {
+  async registerCLI(cli: CLIRegistry) {
     cli.registerCommand({
       name: "bills",
       description: "Manage bank account connections and transaction imports",
@@ -53,7 +59,7 @@ export const billclawPlugin: Plugin = {
   },
 
   // Register Agent tools
-  async registerTools(tools) {
+  async registerTools(tools: ToolRegistry) {
     tools.register({
       name: "plaid_sync",
       description: "Sync transactions from Plaid-connected bank accounts",
@@ -66,9 +72,9 @@ export const billclawPlugin: Plugin = {
           },
         },
       },
-      handler: async (params) => {
+      handler: async (params: any, context: any) => {
         const { plaidSyncTool } = await import("./src/tools/plaid-sync.js");
-        return plaidSyncTool(params);
+        return plaidSyncTool(context, params);
       },
     });
 
@@ -84,7 +90,7 @@ export const billclawPlugin: Plugin = {
           },
         },
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         const { gmailFetchTool } = await import("./src/tools/gmail-fetch.js");
         return gmailFetchTool(params);
       },
@@ -107,7 +113,7 @@ export const billclawPlugin: Plugin = {
         },
         required: ["source", "data"],
       },
-      handler: async (params) => {
+      handler: async (params: any) => {
         const { billParseTool } = await import("./src/tools/bill-parse.js");
         return billParseTool(params);
       },
@@ -115,11 +121,11 @@ export const billclawPlugin: Plugin = {
   },
 
   // Register OAuth providers
-  async registerOAuth(oauth) {
+  async registerOAuth(oauth: OAuthRegistry) {
     oauth.register({
       name: "plaid",
       description: "Plaid Link OAuth flow for connecting bank accounts",
-      handler: async (context) => {
+      handler: async (context: any) => {
         const { plaidOAuth } = await import("./src/oauth/plaid.js");
         return plaidOAuth(context);
       },
@@ -127,11 +133,11 @@ export const billclawPlugin: Plugin = {
   },
 
   // Register background services
-  async registerServices(services) {
+  async registerServices(services: ServiceRegistry) {
     services.register({
       name: "sync-service",
       description: "Background service for automatic transaction synchronization",
-      handler: async (context) => {
+      handler: async (context: any) => {
         const { syncService } = await import("./src/services/sync-service.js");
         return syncService(context);
       },
@@ -140,7 +146,7 @@ export const billclawPlugin: Plugin = {
     services.register({
       name: "webhook-handler",
       description: "HTTP endpoint for handling Plaid and Gmail webhooks",
-      handler: async (context) => {
+      handler: async (context: any) => {
         const { webhookHandler } = await import("./src/services/webhook-handler.js");
         return webhookHandler(context);
       },
