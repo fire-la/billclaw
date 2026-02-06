@@ -2,64 +2,64 @@
  * Sync service for BillClaw - Framework-agnostic background sync logic
  */
 
-import type { AccountConfig } from "../models/config.js";
-import type { Logger } from "../errors/errors.js";
+import type { AccountConfig } from "../models/config.js"
+import type { Logger } from "../errors/errors.js"
 
 export interface SyncResult {
-  accountId: string;
-  success: boolean;
-  transactionsAdded: number;
-  transactionsUpdated: number;
-  errors?: string[];
+  accountId: string
+  success: boolean
+  transactionsAdded: number
+  transactionsUpdated: number
+  errors?: string[]
 }
 
 export interface SyncServiceState {
-  isRunning: boolean;
-  lastSync: string | null;
-  nextSync: string | null;
-  accountsSynced: number;
+  isRunning: boolean
+  lastSync: string | null
+  nextSync: string | null
+  accountsSynced: number
 }
 
 /**
  * Sync function interface - adapters provide the actual sync implementation
  */
 export interface SyncProvider {
-  syncAccount(accountId: string): Promise<SyncResult>;
+  syncAccount(accountId: string): Promise<SyncResult>
 }
 
 /**
  * Calculate next sync time based on sync frequency
  */
 export function calculateNextSync(frequency: string, lastSync?: Date): Date {
-  const now = new Date();
-  const base = lastSync || now;
+  const now = new Date()
+  const base = lastSync || now
 
   switch (frequency) {
     case "realtime":
       // Webhook-based, no scheduled sync
-      return new Date(0);
+      return new Date(0)
 
     case "hourly":
-      return new Date(base.getTime() + 60 * 60 * 1000);
+      return new Date(base.getTime() + 60 * 60 * 1000)
 
     case "daily":
       // Next day at same time
-      const nextDay = new Date(base);
-      nextDay.setDate(nextDay.getDate() + 1);
-      return nextDay;
+      const nextDay = new Date(base)
+      nextDay.setDate(nextDay.getDate() + 1)
+      return nextDay
 
     case "weekly":
       // Next week on same day
-      const nextWeek = new Date(base);
-      nextWeek.setDate(nextWeek.getDate() + 7);
-      return nextWeek;
+      const nextWeek = new Date(base)
+      nextWeek.setDate(nextWeek.getDate() + 7)
+      return nextWeek
 
     case "manual":
       // No scheduled sync
-      return new Date(0);
+      return new Date(0)
 
     default:
-      return new Date(base.getTime() + 24 * 60 * 60 * 1000);
+      return new Date(base.getTime() + 24 * 60 * 60 * 1000)
   }
 }
 
@@ -68,23 +68,23 @@ export function calculateNextSync(frequency: string, lastSync?: Date): Date {
  */
 export function isDueForSync(account: AccountConfig): boolean {
   if (!account.enabled || !account.lastSync) {
-    return true;
+    return true
   }
 
-  const lastSync = new Date(account.lastSync);
-  const nextSync = calculateNextSync(account.syncFrequency, lastSync);
+  const lastSync = new Date(account.lastSync)
+  const nextSync = calculateNextSync(account.syncFrequency, lastSync)
 
   // Manual accounts never sync automatically
   if (account.syncFrequency === "manual") {
-    return false;
+    return false
   }
 
   // Realtime accounts sync via webhook, not scheduled
   if (account.syncFrequency === "realtime") {
-    return false;
+    return false
   }
 
-  return new Date() >= nextSync;
+  return new Date() >= nextSync
 }
 
 /**
@@ -93,32 +93,29 @@ export function isDueForSync(account: AccountConfig): boolean {
 async function syncAccount(
   accountId: string,
   syncProvider: SyncProvider,
-  logger: Logger
+  logger: Logger,
 ): Promise<SyncResult> {
   try {
-    const result = await syncProvider.syncAccount(accountId);
+    const result = await syncProvider.syncAccount(accountId)
 
     if (result.success) {
       logger.info?.(
-        `Sync completed for ${accountId}: ${result.transactionsAdded} added, ${result.transactionsUpdated} updated`
-      );
+        `Sync completed for ${accountId}: ${result.transactionsAdded} added, ${result.transactionsUpdated} updated`,
+      )
     } else {
-      logger.error?.(
-        `Sync failed for ${accountId}:`,
-        result.errors || []
-      );
+      logger.error?.(`Sync failed for ${accountId}:`, result.errors || [])
     }
 
-    return result;
+    return result
   } catch (error) {
-    logger.error?.(`Error syncing ${accountId}:`, error);
+    logger.error?.(`Error syncing ${accountId}:`, error)
     return {
       accountId,
       success: false,
       transactionsAdded: 0,
       transactionsUpdated: 0,
       errors: [error instanceof Error ? error.message : String(error)],
-    };
+    }
   }
 }
 
@@ -133,39 +130,39 @@ async function syncAccount(
 export async function syncDueAccounts(
   accounts: AccountConfig[],
   syncProvider: SyncProvider,
-  logger: Logger
+  logger: Logger,
 ): Promise<SyncResult[]> {
-  logger.info?.("BillClaw sync service started");
+  logger.info?.("BillClaw sync service started")
 
   // Filter for enabled accounts
-  const enabledAccounts = accounts.filter((acc) => acc.enabled);
+  const enabledAccounts = accounts.filter((acc) => acc.enabled)
 
   if (enabledAccounts.length === 0) {
-    logger.info?.("No enabled accounts to sync");
-    return [];
+    logger.info?.("No enabled accounts to sync")
+    return []
   }
 
-  logger.info?.(`Found ${enabledAccounts.length} enabled accounts to check`);
+  logger.info?.(`Found ${enabledAccounts.length} enabled accounts to check`)
 
-  const results: SyncResult[] = [];
-  let syncedCount = 0;
+  const results: SyncResult[] = []
+  let syncedCount = 0
 
   for (const account of enabledAccounts) {
     if (isDueForSync(account)) {
-      logger.info?.(`Syncing account: ${account.name} (${account.id})`);
-      const result = await syncAccount(account.id, syncProvider, logger);
-      results.push(result);
+      logger.info?.(`Syncing account: ${account.name} (${account.id})`)
+      const result = await syncAccount(account.id, syncProvider, logger)
+      results.push(result)
       if (result.success) {
-        syncedCount++;
+        syncedCount++
       }
     } else {
       logger.info?.(
-        `Skipping ${account.name} (${account.id}): not due for sync`
-      );
+        `Skipping ${account.name} (${account.id}): not due for sync`,
+      )
     }
   }
 
-  logger.info?.(`Sync service completed: ${syncedCount} accounts synced`);
+  logger.info?.(`Sync service completed: ${syncedCount} accounts synced`)
 
-  return results;
+  return results
 }

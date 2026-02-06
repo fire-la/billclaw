@@ -6,4 +6,4 @@
  * of a separate config-ui-hints.js file.
  */
 
-export { billclawUiHints as default } from "./config.js";
+export { billclawUiHints as default } from "./config.js"

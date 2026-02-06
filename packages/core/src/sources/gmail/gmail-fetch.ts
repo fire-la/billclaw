@@ -5,61 +5,61 @@
  * OAuth token management is provided by the adapter layer.
  */
 
-import type { Logger } from "../../errors/errors.js";
-import type { StorageConfig } from "../../models/config.js";
-import type { Transaction } from "../../storage/transaction-storage.js";
-import { appendTransactions } from "../../storage/transaction-storage.js";
+import type { Logger } from "../../errors/errors.js"
+import type { StorageConfig } from "../../models/config.js"
+import type { Transaction } from "../../storage/transaction-storage.js"
+import { appendTransactions } from "../../storage/transaction-storage.js"
 import {
   filterToBills,
   type EmailContent,
   type GmailConfig,
-} from "./bill-recognizer.js";
+} from "./bill-recognizer.js"
 import {
   parseBillToTransaction,
   type ParsedTransaction,
-} from "./email-parser.js";
+} from "./email-parser.js"
 
 export interface GmailAccount {
-  id: string;
-  gmailEmailAddress: string;
+  id: string
+  gmailEmailAddress: string
 }
 
 export interface GmailFetchResult {
-  success: boolean;
-  accountId: string;
-  emailsProcessed: number;
-  billsExtracted: number;
-  transactionsAdded: number;
-  transactionsUpdated: number;
-  errors?: string[];
+  success: boolean
+  accountId: string
+  emailsProcessed: number
+  billsExtracted: number
+  transactionsAdded: number
+  transactionsUpdated: number
+  errors?: string[]
 }
 
 /**
  * Gmail fetcher options
  */
 export interface GmailFetcherOptions {
-  accessToken: string;
-  userId?: string; // Gmail user ID (default: "me")
-  query?: string; // Gmail search query
-  maxResults?: number; // Maximum number of emails to fetch
+  accessToken: string
+  userId?: string // Gmail user ID (default: "me")
+  query?: string // Gmail search query
+  maxResults?: number // Maximum number of emails to fetch
 }
 
 /**
  * Gmail API message structure (simplified)
  */
 interface GmailMessage {
-  id: string;
-  threadId: string;
+  id: string
+  threadId: string
   payload: {
-    headers?: Array<{ name: string; value: string }>;
-    body?: { data: string };
+    headers?: Array<{ name: string value: string }>
+    body?: { data: string }
     parts?: Array<{
-      mimeType?: string;
-      body?: { data: string };
-      parts?: any[];
-    }>;
-  };
-  internalDate?: string;
+      mimeType?: string
+      body?: { data: string }
+      parts?: any[]
+    }>
+  }
+  internalDate?: string
 }
 
 /**
@@ -74,20 +74,22 @@ interface GmailMessage {
 export async function fetchGmailEmails(
   options: GmailFetcherOptions,
   config: GmailConfig,
-  logger: Logger
+  logger: Logger,
 ): Promise<EmailContent[]> {
-  const { accessToken, userId = "me", query, maxResults = 50 } = options;
+  const { accessToken, userId = "me", query, maxResults = 50 } = options
 
-  logger.info?.("Fetching emails from Gmail API...");
+  logger.info?.("Fetching emails from Gmail API...")
 
   // Build Gmail search query
-  let searchQuery = query || buildGmailQuery(config);
+  let searchQuery = query || buildGmailQuery(config)
 
   try {
     // Construct Gmail API URL
-    const apiUrl = new URL(`https://www.googleapis.com/gmail/v1/users/${userId}/messages`);
-    apiUrl.searchParams.set("q", searchQuery);
-    apiUrl.searchParams.set("maxResults", maxResults.toString());
+    const apiUrl = new URL(
+      `https://www.googleapis.com/gmail/v1/users/${userId}/messages`,
+    )
+    apiUrl.searchParams.set("q", searchQuery)
+    apiUrl.searchParams.set("maxResults", maxResults.toString())
 
     // Fetch message list
     const response = await fetch(apiUrl.toString(), {
@@ -95,42 +97,45 @@ export async function fetchGmailEmails(
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
-    });
+    })
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gmail API error: ${response.status} ${errorText}`);
+      const errorText = await response.text()
+      throw new Error(`Gmail API error: ${response.status} ${errorText}`)
     }
 
-    const data = await response.json() as { messages?: Array<{ id: string; threadId: string }> };
-    const messages: Array<{ id: string; threadId: string }> = data.messages || [];
+    const data = (await response.json()) as {
+      messages?: Array<{ id: string threadId: string }>
+    }
+    const messages: Array<{ id: string threadId: string }> = data.messages || []
 
-    logger.info?.(`Found ${messages.length} messages matching query`);
+    logger.info?.(`Found ${messages.length} messages matching query`)
 
     if (messages.length === 0) {
-      return [];
+      return []
     }
 
     // Fetch full message details for each message
-    const emails: EmailContent[] = [];
+    const emails: EmailContent[] = []
 
     for (const message of messages) {
       try {
-        const email = await fetchGmailMessage(userId, message.id, accessToken);
+        const email = await fetchGmailMessage(userId, message.id, accessToken)
         if (email) {
-          emails.push(email);
+          emails.push(email)
         }
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Unknown error";
-        logger.warn?.(`Failed to fetch message ${message.id}: ${errorMsg}`);
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error"
+        logger.warn?.(`Failed to fetch message ${message.id}: ${errorMsg}`)
       }
     }
 
-    return emails;
+    return emails
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    logger.error?.(`Gmail fetch failed: ${errorMsg}`);
-    throw error;
+    const errorMsg = error instanceof Error ? error.message : "Unknown error"
+    logger.error?.(`Gmail fetch failed: ${errorMsg}`)
+    throw error
   }
 }
 
@@ -140,46 +145,48 @@ export async function fetchGmailEmails(
 async function fetchGmailMessage(
   userId: string,
   messageId: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<EmailContent | null> {
   const apiUrl = new URL(
-    `https://www.googleapis.com/gmail/v1/users/${userId}/messages/${messageId}`
-  );
-  apiUrl.searchParams.set("format", "full");
+    `https://www.googleapis.com/gmail/v1/users/${userId}/messages/${messageId}`,
+  )
+  apiUrl.searchParams.set("format", "full")
 
   const response = await fetch(apiUrl.toString(), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
     },
-  });
+  })
 
   if (!response.ok) {
-    return null;
+    return null
   }
 
-  const message = await response.json() as GmailMessage;
-  return parseGmailMessage(message);
+  const message = (await response.json()) as GmailMessage
+  return parseGmailMessage(message)
 }
 
 /**
  * Parse Gmail API message into EmailContent
  */
 function parseGmailMessage(message: GmailMessage): EmailContent | null {
-  const headers = message.payload.headers || [];
+  const headers = message.payload.headers || []
 
   const getHeader = (name: string): string => {
-    const header = headers.find((h) => h.name.toLowerCase() === name.toLowerCase());
-    return header?.value || "";
-  };
+    const header = headers.find(
+      (h) => h.name.toLowerCase() === name.toLowerCase(),
+    )
+    return header?.value || ""
+  }
 
-  const subject = getHeader("Subject");
-  const from = getHeader("From");
-  const to = getHeader("To");
-  const date = getHeader("Date");
+  const subject = getHeader("Subject")
+  const from = getHeader("From")
+  const to = getHeader("To")
+  const date = getHeader("Date")
 
   // Extract body text
-  const body = extractMessageBody(message.payload);
+  const body = extractMessageBody(message.payload)
 
   return {
     id: message.id,
@@ -188,7 +195,7 @@ function parseGmailMessage(message: GmailMessage): EmailContent | null {
     to,
     date,
     body,
-  };
+  }
 }
 
 /**
@@ -198,7 +205,7 @@ function parseGmailMessage(message: GmailMessage): EmailContent | null {
 function extractMessageBody(payload: GmailMessage["payload"]): string {
   // If body has data, decode it
   if (payload.body?.data) {
-    return base64UrlDecode(payload.body.data);
+    return base64UrlDecode(payload.body.data)
   }
 
   // If there are parts, traverse them to find text content
@@ -206,27 +213,27 @@ function extractMessageBody(payload: GmailMessage["payload"]): string {
     for (const part of payload.parts) {
       // Prefer plain text over HTML
       if (part.mimeType === "text/plain" && part.body?.data) {
-        return base64UrlDecode(part.body.data);
+        return base64UrlDecode(part.body.data)
       }
       if (part.mimeType === "text/html" && part.body?.data) {
         // Strip HTML tags for plain text
-        const html = base64UrlDecode(part.body.data);
+        const html = base64UrlDecode(part.body.data)
         return html
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
           .replace(/<[^>]+>/g, " ")
           .replace(/\s+/g, " ")
-          .trim();
+          .trim()
       }
       // Recurse into nested parts
-      const nestedBody = extractMessageBody(part);
+      const nestedBody = extractMessageBody(part)
       if (nestedBody) {
-        return nestedBody;
+        return nestedBody
       }
     }
   }
 
-  return "";
+  return ""
 }
 
 /**
@@ -234,22 +241,22 @@ function extractMessageBody(payload: GmailMessage["payload"]): string {
  */
 function base64UrlDecode(encoded: string): string {
   // Replace base64url characters with base64 standard
-  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/")
 
   // Add padding if needed
-  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=")
 
   // Decode
   try {
-    const binary = atob(padded);
-    const bytes = new Uint8Array(binary.length);
+    const binary = atob(padded)
+    const bytes = new Uint8Array(binary.length)
     for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+      bytes[i] = binary.charCodeAt(i)
     }
-    return new TextDecoder().decode(bytes);
+    return new TextDecoder().decode(bytes)
   } catch {
     // Fallback for simple base64 without padding
-    return atob(base64);
+    return atob(base64)
   }
 }
 
@@ -257,14 +264,12 @@ function base64UrlDecode(encoded: string): string {
  * Build Gmail search query from config
  */
 function buildGmailQuery(config: GmailConfig): string {
-  const parts: string[] = [];
+  const parts: string[] = []
 
   // Add keyword search
   if (config.keywords.length > 0) {
-    const keywordQuery = config.keywords
-      .map((k) => `"${k}"`)
-      .join(" OR ");
-    parts.push(`(${keywordQuery})`);
+    const keywordQuery = config.keywords.map((k) => `"${k}"`).join(" OR ")
+    parts.push(`(${keywordQuery})`)
   }
 
   // Add sender whitelist
@@ -272,26 +277,24 @@ function buildGmailQuery(config: GmailConfig): string {
     const senderQuery = config.senderWhitelist
       .map((s) => {
         if (s.startsWith("@")) {
-          return `from:${s}`;
+          return `from:${s}`
         }
-        return `from:${s}`;
+        return `from:${s}`
       })
-      .join(" OR ");
-    parts.push(`(${senderQuery})`);
+      .join(" OR ")
+    parts.push(`(${senderQuery})`)
   }
 
   // Add time filter (emails from last 30 days)
-  parts.push("newer_than:30d");
+  parts.push("newer_than:30d")
 
-  return parts.join(" ");
+  return parts.join(" ")
 }
 
 /**
  * Parse ParsedTransaction to Transaction format for storage
  */
-function parsedToStorageTransaction(
-  parsed: ParsedTransaction
-): Transaction {
+function parsedToStorageTransaction(parsed: ParsedTransaction): Transaction {
   return {
     transactionId: parsed.transactionId,
     plaidTransactionId: parsed.transactionId, // Gmail uses same field
@@ -304,7 +307,7 @@ function parsedToStorageTransaction(
     paymentChannel: parsed.paymentChannel,
     pending: parsed.pending,
     createdAt: new Date().toISOString(),
-  };
+  }
 }
 
 /**
@@ -322,7 +325,7 @@ export async function fetchGmailBills(
   gmailConfig: GmailConfig,
   storageConfig: StorageConfig,
   logger: Logger,
-  accessToken?: string
+  accessToken?: string,
 ): Promise<GmailFetchResult> {
   if (!accessToken) {
     return {
@@ -333,11 +336,11 @@ export async function fetchGmailBills(
       transactionsAdded: 0,
       transactionsUpdated: 0,
       errors: ["No OAuth access token provided"],
-    };
+    }
   }
 
   try {
-    logger.info?.(`Fetching Gmail bills for account ${account.id}...`);
+    logger.info?.(`Fetching Gmail bills for account ${account.id}...`)
 
     // Step 1: Fetch emails from Gmail
     const emails = await fetchGmailEmails(
@@ -347,10 +350,10 @@ export async function fetchGmailBills(
         maxResults: 50,
       },
       gmailConfig,
-      logger
-    );
+      logger,
+    )
 
-    logger.info?.(`Fetched ${emails.length} emails from Gmail`);
+    logger.info?.(`Fetched ${emails.length} emails from Gmail`)
 
     if (emails.length === 0) {
       return {
@@ -360,15 +363,15 @@ export async function fetchGmailBills(
         billsExtracted: 0,
         transactionsAdded: 0,
         transactionsUpdated: 0,
-      };
+      }
     }
 
     // Step 2: Recognize bills from emails
-    const billEmails = filterToBills(emails, gmailConfig);
+    const billEmails = filterToBills(emails, gmailConfig)
 
     logger.info?.(
-      `Identified ${billEmails.length} bill emails (threshold: ${gmailConfig.confidenceThreshold})`
-    );
+      `Identified ${billEmails.length} bill emails (threshold: ${gmailConfig.confidenceThreshold})`,
+    )
 
     if (billEmails.length === 0) {
       return {
@@ -378,11 +381,11 @@ export async function fetchGmailBills(
         billsExtracted: 0,
         transactionsAdded: 0,
         transactionsUpdated: 0,
-      };
+      }
     }
 
     // Step 3: Parse bills into transactions
-    const transactions: Transaction[] = [];
+    const transactions: Transaction[] = []
 
     for (const { email, recognition } of billEmails) {
       const parsed = parseBillToTransaction(
@@ -392,25 +395,25 @@ export async function fetchGmailBills(
         email.body,
         email.from,
         email.date,
-        recognition
-      );
+        recognition,
+      )
 
-      transactions.push(parsedToStorageTransaction(parsed));
+      transactions.push(parsedToStorageTransaction(parsed))
     }
 
     // Step 4: Store transactions
-    const now = new Date();
+    const now = new Date()
     const storageResult = await appendTransactions(
       account.id,
       now.getFullYear(),
       now.getMonth() + 1,
       transactions,
-      storageConfig
-    );
+      storageConfig,
+    )
 
     logger.info?.(
-      `Stored ${storageResult.added} new, ${storageResult.updated} updated transactions`
-    );
+      `Stored ${storageResult.added} new, ${storageResult.updated} updated transactions`,
+    )
 
     return {
       success: true,
@@ -419,10 +422,10 @@ export async function fetchGmailBills(
       billsExtracted: billEmails.length,
       transactionsAdded: storageResult.added,
       transactionsUpdated: storageResult.updated,
-    };
+    }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    logger.error?.(`Gmail fetch failed: ${errorMsg}`);
+    const errorMsg = error instanceof Error ? error.message : "Unknown error"
+    logger.error?.(`Gmail fetch failed: ${errorMsg}`)
     return {
       success: false,
       accountId: account.id,
@@ -431,10 +434,10 @@ export async function fetchGmailBills(
       transactionsAdded: 0,
       transactionsUpdated: 0,
       errors: [errorMsg],
-    };
+    }
   }
 }
 
 // Re-export types and functions from submodules
-export * from "./bill-recognizer.js";
-export * from "./email-parser.js";
+export * from "./bill-recognizer.js"
+export * from "./email-parser.js"

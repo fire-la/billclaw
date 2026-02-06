@@ -7,14 +7,14 @@
  * 2. Public token exchange (for completing the connection)
  */
 
-import type { OpenClawPluginApi } from "../types/openclaw-plugin.js";
-import { createPlaidClient, type PlaidConfig } from "@fire-zu/billclaw-core";
+import type { OpenClawPluginApi } from "../types/openclaw-plugin.js"
+import { createPlaidClient, type PlaidConfig } from "@fire-zu/billclaw-core"
 import type {
   LinkTokenCreateRequest,
   LinkTokenCreateResponse,
   ItemPublicTokenExchangeRequest,
   ItemPublicTokenExchangeResponse,
-} from "plaid";
+} from "plaid"
 
 /**
  * Get Plaid configuration from OpenClaw config
@@ -22,24 +22,24 @@ import type {
  * Checks both pluginConfig and environment variables for credentials.
  */
 function getPlaidConfig(api: OpenClawPluginApi): PlaidConfig {
-  const pluginConfig = api.pluginConfig as any;
-  const plaidConfig = pluginConfig?.plaid || {};
+  const pluginConfig = api.pluginConfig as any
+  const plaidConfig = pluginConfig?.plaid || {}
 
-  const clientId = plaidConfig.clientId || process.env.PLAID_CLIENT_ID;
-  const secret = plaidConfig.secret || process.env.PLAID_SECRET;
-  const environment = plaidConfig.environment || "sandbox";
+  const clientId = plaidConfig.clientId || process.env.PLAID_CLIENT_ID
+  const secret = plaidConfig.secret || process.env.PLAID_SECRET
+  const environment = plaidConfig.environment || "sandbox"
 
   if (!clientId || !secret) {
     throw new Error(
       "Plaid credentials not configured. Set PLAID_CLIENT_ID and PLAID_SECRET environment variables, or configure them in billclaw settings.",
-    );
+    )
   }
 
   return {
     clientId,
     secret,
     environment: environment as "sandbox" | "development" | "production",
-  };
+  }
 }
 
 /**
@@ -49,8 +49,8 @@ async function createLinkToken(
   api: OpenClawPluginApi,
   accountId?: string,
 ): Promise<{ linkToken: string }> {
-  const plaidConfig = getPlaidConfig(api);
-  const plaidClient = createPlaidClient(plaidConfig);
+  const plaidConfig = getPlaidConfig(api)
+  const plaidClient = createPlaidClient(plaidConfig)
 
   const request: LinkTokenCreateRequest = {
     user: {
@@ -60,14 +60,14 @@ async function createLinkToken(
     products: ["transactions" as any],
     country_codes: ["US" as any],
     language: "en",
-  };
+  }
 
-  const axiosResponse = await plaidClient.linkTokenCreate(request);
-  const response: LinkTokenCreateResponse = axiosResponse.data;
+  const axiosResponse = await plaidClient.linkTokenCreate(request)
+  const response: LinkTokenCreateResponse = axiosResponse.data
 
-  api.logger.info?.("Plaid Link token created successfully");
+  api.logger.info?.("Plaid Link token created successfully")
 
-  return { linkToken: response.link_token };
+  return { linkToken: response.link_token }
 }
 
 /**
@@ -76,23 +76,23 @@ async function createLinkToken(
 async function exchangePublicToken(
   api: OpenClawPluginApi,
   publicToken: string,
-): Promise<{ accessToken: string; itemId: string }> {
-  const plaidConfig = getPlaidConfig(api);
-  const plaidClient = createPlaidClient(plaidConfig);
+): Promise<{ accessToken: string itemId: string }> {
+  const plaidConfig = getPlaidConfig(api)
+  const plaidClient = createPlaidClient(plaidConfig)
 
   const request: ItemPublicTokenExchangeRequest = {
     public_token: publicToken,
-  };
+  }
 
-  const axiosResponse = await plaidClient.itemPublicTokenExchange(request);
-  const response: ItemPublicTokenExchangeResponse = axiosResponse.data;
+  const axiosResponse = await plaidClient.itemPublicTokenExchange(request)
+  const response: ItemPublicTokenExchangeResponse = axiosResponse.data
 
-  api.logger.info?.("Plaid public token exchanged successfully");
+  api.logger.info?.("Plaid public token exchanged successfully")
 
   return {
     accessToken: response.access_token,
     itemId: response.item_id,
-  };
+  }
 }
 
 /**
@@ -113,21 +113,26 @@ async function exchangePublicToken(
 export async function plaidOAuthHandler(
   api: OpenClawPluginApi,
   publicToken?: string,
-): Promise<{ url: string; token?: string; itemId?: string; accessToken?: string }> {
+): Promise<{
+  url: string
+  token?: string
+  itemId?: string
+  accessToken?: string
+}> {
   try {
     if (!publicToken) {
       // No public token provided - create Link token for initializing Link
-      const { linkToken } = await createLinkToken(api);
+      const { linkToken } = await createLinkToken(api)
 
       // Return Plaid Link URL and the link token
       return {
         url: "https://cdn.plaid.com/link/v2/stable/link.html",
         token: linkToken,
-      };
+      }
     }
 
     // Public token provided - exchange for access token
-    const { accessToken, itemId } = await exchangePublicToken(api, publicToken);
+    const { accessToken, itemId } = await exchangePublicToken(api, publicToken)
 
     // Return the access token and item ID for storage
     return {
@@ -135,9 +140,9 @@ export async function plaidOAuthHandler(
       token: accessToken,
       itemId,
       accessToken,
-    };
+    }
   } catch (error) {
-    api.logger.error?.("Plaid OAuth error:", error);
-    throw error;
+    api.logger.error?.("Plaid OAuth error:", error)
+    throw error
   }
 }

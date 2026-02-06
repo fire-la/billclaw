@@ -4,4 +4,4 @@
  * @packageDocumentation
  */
 
-export * from './gmail-fetch.js';
+export * from "./gmail-fetch.js"

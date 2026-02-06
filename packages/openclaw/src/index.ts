@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 
-export { default } from './plugin.js';
+export { default } from "./plugin.js"
 
 // Re-export tools for testing
 export {
@@ -14,4 +14,4 @@ export {
   conversationalSyncTool,
   conversationalStatusTool,
   conversationalHelpTool,
-} from './tools/index.js';
+} from "./tools/index.js"

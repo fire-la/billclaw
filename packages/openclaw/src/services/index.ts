@@ -4,4 +4,4 @@
  * This module exports service utilities for webhook handling.
  */
 
-export { registerWebhookHandlers } from "./webhook-handler.js";
+export { registerWebhookHandlers } from "./webhook-handler.js"

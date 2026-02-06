@@ -10,23 +10,23 @@
  * This improves performance by reducing disk I/O for commonly accessed data.
  */
 
-import type { Logger } from "../errors/errors.js";
+import type { Logger } from "../errors/errors.js"
 
 /**
  * Cache entry with TTL
  */
 interface CacheEntry<T> {
-  value: T;
-  expiresAt: number;
+  value: T
+  expiresAt: number
 }
 
 /**
  * Cache configuration
  */
 export interface CacheConfig {
-  defaultTtl: number; // Default TTL in milliseconds
-  maxSize: number; // Maximum number of entries
-  logger?: Logger;
+  defaultTtl: number // Default TTL in milliseconds
+  maxSize: number // Maximum number of entries
+  logger?: Logger
 }
 
 /**
@@ -35,23 +35,23 @@ export interface CacheConfig {
 const DEFAULT_CACHE_CONFIG: CacheConfig = {
   defaultTtl: 5 * 60 * 1000, // 5 minutes
   maxSize: 1000,
-};
+}
 
 /**
  * In-memory cache with TTL support
  */
 export class MemoryCache {
-  private cache = new Map<string, CacheEntry<unknown>>();
-  private config: CacheConfig;
-  private cleanupTimer?: ReturnType<typeof setInterval>;
+  private cache = new Map<string, CacheEntry<unknown>>()
+  private config: CacheConfig
+  private cleanupTimer?: ReturnType<typeof setInterval>
 
   constructor(config: Partial<CacheConfig> = {}) {
-    this.config = { ...DEFAULT_CACHE_CONFIG, ...config };
+    this.config = { ...DEFAULT_CACHE_CONFIG, ...config }
 
     // Periodically clean up expired entries
     this.cleanupTimer = setInterval(() => {
-      this.cleanupExpired();
-    }, 60 * 1000); // Every minute
+      this.cleanupExpired()
+    }, 60 * 1000) // Every minute
   }
 
   /**
@@ -61,16 +61,18 @@ export class MemoryCache {
    * @param value - Value to cache
    * @param ttl - Time to live in milliseconds (uses default if not specified)
    */
-  set<T>(key: string, value: T, ttl?: number): void {
-    const expiresAt = Date.now() + (ttl ?? this.config.defaultTtl);
+  set<T,>(key: string, value: T, ttl?: number): void {
+    const expiresAt = Date.now() + (ttl ?? this.config.defaultTtl)
 
     // Enforce max size by removing oldest entries if needed
     if (this.cache.size >= this.config.maxSize && !this.cache.has(key)) {
-      this.evictOldest();
+      this.evictOldest()
     }
 
-    this.cache.set(key, { value, expiresAt });
-    this.config.logger?.debug?.(`Cache set: ${key} (TTL: ${ttl ?? this.config.defaultTtl}ms)`);
+    this.cache.set(key, { value, expiresAt })
+    this.config.logger?.debug?.(
+      `Cache set: ${key} (TTL: ${ttl ?? this.config.defaultTtl}ms)`,
+    )
   }
 
   /**
@@ -79,22 +81,22 @@ export class MemoryCache {
    * @param key - Cache key
    * @returns The cached value, or null if not found or expired
    */
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
+  get<T,>(key: string): T | null {
+    const entry = this.cache.get(key)
 
     if (!entry) {
-      return null;
+      return null
     }
 
     // Check if expired (use >= to handle TTL of 0)
     if (Date.now() >= entry.expiresAt) {
-      this.cache.delete(key);
-      this.config.logger?.debug?.(`Cache miss (expired): ${key}`);
-      return null;
+      this.cache.delete(key)
+      this.config.logger?.debug?.(`Cache miss (expired): ${key}`)
+      return null
     }
 
-    this.config.logger?.debug?.(`Cache hit: ${key}`);
-    return entry.value as T;
+    this.config.logger?.debug?.(`Cache hit: ${key}`)
+    return entry.value as T
   }
 
   /**
@@ -104,18 +106,18 @@ export class MemoryCache {
    * @returns true if the key exists and is not expired
    */
   has(key: string): boolean {
-    const entry = this.cache.get(key);
+    const entry = this.cache.get(key)
 
     if (!entry) {
-      return false;
+      return false
     }
 
     if (Date.now() >= entry.expiresAt) {
-      this.cache.delete(key);
-      return false;
+      this.cache.delete(key)
+      return false
     }
 
-    return true;
+    return true
   }
 
   /**
@@ -125,48 +127,50 @@ export class MemoryCache {
    * @returns true if the key was deleted
    */
   delete(key: string): boolean {
-    this.config.logger?.debug?.(`Cache delete: ${key}`);
-    return this.cache.delete(key);
+    this.config.logger?.debug?.(`Cache delete: ${key}`)
+    return this.cache.delete(key)
   }
 
   /**
    * Clear all values from the cache
    */
   clear(): void {
-    this.cache.clear();
-    this.config.logger?.info?.("Cache cleared");
+    this.cache.clear()
+    this.config.logger?.info?.("Cache cleared")
   }
 
   /**
    * Get the number of entries in the cache
    */
   size(): number {
-    return this.cache.size;
+    return this.cache.size
   }
 
   /**
    * Get all cache keys
    */
   keys(): string[] {
-    return Array.from(this.cache.keys());
+    return Array.from(this.cache.keys())
   }
 
   /**
    * Clean up expired entries
    */
   private cleanupExpired(): void {
-    const now = Date.now();
-    let cleaned = 0;
+    const now = Date.now()
+    let cleaned = 0
 
     for (const [key, entry] of this.cache.entries()) {
       if (now > entry.expiresAt) {
-        this.cache.delete(key);
-        cleaned++;
+        this.cache.delete(key)
+        cleaned++
       }
     }
 
     if (cleaned > 0) {
-      this.config.logger?.debug?.(`Cache cleanup: removed ${cleaned} expired entries`);
+      this.config.logger?.debug?.(
+        `Cache cleanup: removed ${cleaned} expired entries`,
+      )
     }
   }
 
@@ -174,19 +178,19 @@ export class MemoryCache {
    * Evict the oldest entry (LRU-style eviction)
    */
   private evictOldest(): void {
-    let oldestKey: string | null = null;
-    let oldestTime = Infinity;
+    let oldestKey: string | null = null
+    let oldestTime = Infinity
 
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiresAt < oldestTime) {
-        oldestTime = entry.expiresAt;
-        oldestKey = key;
+        oldestTime = entry.expiresAt
+        oldestKey = key
       }
     }
 
     if (oldestKey) {
-      this.cache.delete(oldestKey);
-      this.config.logger?.debug?.(`Cache evicted (oldest): ${oldestKey}`);
+      this.cache.delete(oldestKey)
+      this.config.logger?.debug?.(`Cache evicted (oldest): ${oldestKey}`)
     }
   }
 
@@ -195,10 +199,10 @@ export class MemoryCache {
    */
   destroy(): void {
     if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
-      this.cleanupTimer = undefined;
+      clearInterval(this.cleanupTimer)
+      this.cleanupTimer = undefined
     }
-    this.clear();
+    this.clear()
   }
 }
 
@@ -210,94 +214,92 @@ export const CacheKeys = {
    * Account configuration cache key
    */
   account(accountId: string): string {
-    return `account:${accountId}`;
+    return `account:${accountId}`
   },
 
   /**
    * Transaction list cache key
    */
   transactions(accountId: string, year: number, month: number): string {
-    return `transactions:${accountId}:${year}:${month}`;
+    return `transactions:${accountId}:${year}:${month}`
   },
 
   /**
    * Sync state cache key
    */
   syncState(accountId: string): string {
-    return `sync_state:${accountId}`;
+    return `sync_state:${accountId}`
   },
 
   /**
    * Plaid balance cache key
    */
   plaidBalance(accountId: string): string {
-    return `plaid_balance:${accountId}`;
+    return `plaid_balance:${accountId}`
   },
 
   /**
    * Gmail history cache key
    */
   gmailHistory(accountId: string): string {
-    return `gmail_history:${accountId}`;
+    return `gmail_history:${accountId}`
   },
-};
+}
 
 /**
  * Create a memory cache with the given configuration
  */
-export function createMemoryCache(
-  config?: Partial<CacheConfig>
-): MemoryCache {
-  return new MemoryCache(config);
+export function createMemoryCache(config?: Partial<CacheConfig>): MemoryCache {
+  return new MemoryCache(config)
 }
 
 /**
  * Cached data wrapper - provides memoization for expensive operations
  */
 export class CachedData<T> {
-  private cache: MemoryCache;
-  private key: string;
-  private ttl: number;
-  private fetchFn: () => Promise<T>;
+  private cache: MemoryCache
+  private key: string
+  private ttl: number
+  private fetchFn: () => Promise<T>
 
   constructor(
     cache: MemoryCache,
     key: string,
     fetchFn: () => Promise<T>,
-    ttl?: number
+    ttl?: number,
   ) {
-    this.cache = cache;
-    this.key = key;
-    this.ttl = ttl ?? cache["config"].defaultTtl;
-    this.fetchFn = fetchFn;
+    this.cache = cache
+    this.key = key
+    this.ttl = ttl ?? cache["config"].defaultTtl
+    this.fetchFn = fetchFn
   }
 
   /**
    * Get the cached value, or fetch if not cached
    */
   async get(): Promise<T> {
-    const cached = this.cache.get<T>(this.key);
+    const cached = this.cache.get<T>(this.key)
 
     if (cached !== null) {
-      return cached;
+      return cached
     }
 
-    const value = await this.fetchFn();
-    this.cache.set(this.key, value, this.ttl);
-    return value;
+    const value = await this.fetchFn()
+    this.cache.set(this.key, value, this.ttl)
+    return value
   }
 
   /**
    * Invalidate the cache
    */
   invalidate(): void {
-    this.cache.delete(this.key);
+    this.cache.delete(this.key)
   }
 
   /**
    * Set a specific value in the cache
    */
   set(value: T): void {
-    this.cache.set(this.key, value, this.ttl);
+    this.cache.set(this.key, value, this.ttl)
   }
 }

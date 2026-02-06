@@ -6,4 +6,4 @@
  * of a separate config.schema.js file.
  */
 
-export { billclawConfigSchema as default } from "./config.js";
+export { billclawConfigSchema as default } from "./config.js"

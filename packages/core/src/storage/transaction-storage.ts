@@ -2,84 +2,84 @@
  * Local file storage utilities for BillClaw data
  */
 
-import type { StorageConfig } from "../models/config.js";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import * as os from "node:os";
+import type { StorageConfig } from "../models/config.js"
+import * as fs from "node:fs/promises"
+import * as path from "node:path"
+import * as os from "node:os"
 
 export interface Transaction {
-  transactionId: string;
-  accountId: string;
-  date: string; // ISO date string
-  amount: number; // Amount in cents (integer)
-  currency: string;
-  category: string[];
-  merchantName: string;
-  paymentChannel: string;
-  pending: boolean;
-  plaidTransactionId: string;
-  createdAt: string; // ISO timestamp
+  transactionId: string
+  accountId: string
+  date: string // ISO date string
+  amount: number // Amount in cents (integer)
+  currency: string
+  category: string[]
+  merchantName: string
+  paymentChannel: string
+  pending: boolean
+  plaidTransactionId: string
+  createdAt: string // ISO timestamp
 }
 
 /**
  * Sync state for idempotency
  */
 export interface SyncState {
-  syncId: string;
-  accountId: string;
-  startedAt: string;
-  completedAt?: string;
-  status: "running" | "completed" | "failed";
-  transactionsAdded: number;
-  transactionsUpdated: number;
-  cursor: string;
-  error?: string;
-  requiresReauth?: boolean; // Set to true when Plaid item requires re-authentication
+  syncId: string
+  accountId: string
+  startedAt: string
+  completedAt?: string
+  status: "running" | "completed" | "failed"
+  transactionsAdded: number
+  transactionsUpdated: number
+  cursor: string
+  error?: string
+  requiresReauth?: boolean // Set to true when Plaid item requires re-authentication
 }
 
 /**
  * Account registry entry
  */
 export interface AccountRegistry {
-  id: string;
-  type: string;
-  name: string;
-  createdAt: string;
-  lastSync?: string;
+  id: string
+  type: string
+  name: string
+  createdAt: string
+  lastSync?: string
 }
 
 /**
  * Global cursor for incremental sync
  */
 export interface GlobalCursor {
-  lastSyncTime: string;
+  lastSyncTime: string
 }
 
 /**
  * Get the base storage directory
  */
 export async function getStorageDir(config?: StorageConfig): Promise<string> {
-  const storagePath = config?.path || "~/.billclaw";
-  const expandedPath = storagePath.replace(/^~/, os.homedir());
-  return expandedPath;
+  const storagePath = config?.path || "~/.billclaw"
+  const expandedPath = storagePath.replace(/^~/, os.homedir())
+  return expandedPath
 }
 
 /**
  * Initialize storage directory structure
  */
 export async function initializeStorage(config?: StorageConfig): Promise<void> {
-  const baseDir = await getStorageDir(config);
+  const baseDir = await getStorageDir(config)
 
   const directories = [
     baseDir,
     path.join(baseDir, "accounts"),
     path.join(baseDir, "transactions"),
     path.join(baseDir, "sync"),
-  ];
+  ]
 
   for (const dir of directories) {
     try {
-      await fs.mkdir(dir, { recursive: true });
+      await fs.mkdir(dir, { recursive: true })
     } catch {
       // Directory may already exist
     }
@@ -90,17 +90,17 @@ export async function initializeStorage(config?: StorageConfig): Promise<void> {
  * Read account registry
  */
 export async function readAccountRegistry(
-  config?: StorageConfig
+  config?: StorageConfig,
 ): Promise<AccountRegistry[]> {
-  const baseDir = await getStorageDir(config);
-  const filePath = path.join(baseDir, "accounts.json");
+  const baseDir = await getStorageDir(config)
+  const filePath = path.join(baseDir, "accounts.json")
 
   try {
-    const content = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(content);
+    const content = await fs.readFile(filePath, "utf-8")
+    return JSON.parse(content)
   } catch {
     // File doesn't exist yet
-    return [];
+    return []
   }
 }
 
@@ -109,13 +109,13 @@ export async function readAccountRegistry(
  */
 export async function writeAccountRegistry(
   accounts: AccountRegistry[],
-  config?: StorageConfig
+  config?: StorageConfig,
 ): Promise<void> {
-  const baseDir = await getStorageDir(config);
-  const filePath = path.join(baseDir, "accounts.json");
+  const baseDir = await getStorageDir(config)
+  const filePath = path.join(baseDir, "accounts.json")
 
-  await initializeStorage(config);
-  await fs.writeFile(filePath, JSON.stringify(accounts, null, 2), "utf-8");
+  await initializeStorage(config)
+  await fs.writeFile(filePath, JSON.stringify(accounts, null, 2), "utf-8")
 }
 
 /**
@@ -125,17 +125,23 @@ export async function readTransactions(
   accountId: string,
   year: number,
   month: number,
-  config?: StorageConfig
+  config?: StorageConfig,
 ): Promise<Transaction[]> {
-  const baseDir = await getStorageDir(config);
-  const monthStr = month.toString().padStart(2, "0");
-  const filePath = path.join(baseDir, "transactions", accountId, `${year}`, `${monthStr}.json`);
+  const baseDir = await getStorageDir(config)
+  const monthStr = month.toString().padStart(2, "0")
+  const filePath = path.join(
+    baseDir,
+    "transactions",
+    accountId,
+    `${year}`,
+    `${monthStr}.json`,
+  )
 
   try {
-    const content = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(content);
+    const content = await fs.readFile(filePath, "utf-8")
+    return JSON.parse(content)
   } catch {
-    return [];
+    return []
   }
 }
 
@@ -148,19 +154,19 @@ export async function writeTransactions(
   year: number,
   month: number,
   transactions: Transaction[],
-  config?: StorageConfig
+  config?: StorageConfig,
 ): Promise<void> {
-  const baseDir = await getStorageDir(config);
-  const monthStr = month.toString().padStart(2, "0");
-  const dirPath = path.join(baseDir, "transactions", accountId, `${year}`);
-  const filePath = path.join(dirPath, `${monthStr}.json`);
+  const baseDir = await getStorageDir(config)
+  const monthStr = month.toString().padStart(2, "0")
+  const dirPath = path.join(baseDir, "transactions", accountId, `${year}`)
+  const filePath = path.join(dirPath, `${monthStr}.json`)
 
-  await fs.mkdir(dirPath, { recursive: true });
+  await fs.mkdir(dirPath, { recursive: true })
 
   // Atomic write: write to temp file first, then rename
-  const tempPath = filePath + ".tmp";
-  await fs.writeFile(tempPath, JSON.stringify(transactions, null, 2), "utf-8");
-  await fs.rename(tempPath, filePath);
+  const tempPath = filePath + ".tmp"
+  await fs.writeFile(tempPath, JSON.stringify(transactions, null, 2), "utf-8")
+  await fs.rename(tempPath, filePath)
 }
 
 /**
@@ -171,36 +177,38 @@ export async function appendTransactions(
   year: number,
   month: number,
   newTransactions: Transaction[],
-  config?: StorageConfig
-): Promise<{ added: number; updated: number }> {
-  const existing = await readTransactions(accountId, year, month, config);
-  const existingIds = new Set(existing.map((t) => t.transactionId));
+  config?: StorageConfig,
+): Promise<{ added: number updated: number }> {
+  const existing = await readTransactions(accountId, year, month, config)
+  const existingIds = new Set(existing.map((t) => t.transactionId))
 
-  let added = 0;
-  let updated = 0;
+  let added = 0
+  let updated = 0
 
   for (const txn of newTransactions) {
     if (existingIds.has(txn.transactionId)) {
       // Update existing transaction
-      const index = existing.findIndex((t) => t.transactionId === txn.transactionId);
+      const index = existing.findIndex(
+        (t) => t.transactionId === txn.transactionId,
+      )
       if (index !== -1) {
-        existing[index] = txn;
-        updated++;
+        existing[index] = txn
+        updated++
       }
     } else {
       // Add new transaction
-      existing.push(txn);
-      existingIds.add(txn.transactionId);
-      added++;
+      existing.push(txn)
+      existingIds.add(txn.transactionId)
+      added++
     }
   }
 
   // Sort by date descending
-  existing.sort((a, b) => b.date.localeCompare(a.date));
+  existing.sort((a, b) => b.date.localeCompare(a.date))
 
-  await writeTransactions(accountId, year, month, existing, config);
+  await writeTransactions(accountId, year, month, existing, config)
 
-  return { added, updated };
+  return { added, updated }
 }
 
 /**
@@ -208,64 +216,72 @@ export async function appendTransactions(
  */
 export async function readSyncStates(
   accountId: string,
-  config?: StorageConfig
+  config?: StorageConfig,
 ): Promise<SyncState[]> {
-  const baseDir = await getStorageDir(config);
-  const dirPath = path.join(baseDir, "sync", accountId);
+  const baseDir = await getStorageDir(config)
+  const dirPath = path.join(baseDir, "sync", accountId)
 
   try {
-    const files = await fs.readdir(dirPath);
-    const states: SyncState[] = [];
+    const files = await fs.readdir(dirPath)
+    const states: SyncState[] = []
 
     for (const file of files) {
-      if (!file.endsWith(".json")) continue;
-      const filePath = path.join(dirPath, file);
-      const content = await fs.readFile(filePath, "utf-8");
-      states.push(JSON.parse(content));
+      if (!file.endsWith(".json")) continue
+      const filePath = path.join(dirPath, file)
+      const content = await fs.readFile(filePath, "utf-8")
+      states.push(JSON.parse(content))
     }
 
-    return states.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    return states.sort((a, b) => b.startedAt.localeCompare(a.startedAt))
   } catch {
-    return [];
+    return []
   }
 }
 
 /**
  * Write sync state
  */
-export async function writeSyncState(state: SyncState, config?: StorageConfig): Promise<void> {
-  const baseDir = await getStorageDir(config);
-  const dirPath = path.join(baseDir, "sync", state.accountId);
-  const filePath = path.join(dirPath, `${state.syncId}.json`);
+export async function writeSyncState(
+  state: SyncState,
+  config?: StorageConfig,
+): Promise<void> {
+  const baseDir = await getStorageDir(config)
+  const dirPath = path.join(baseDir, "sync", state.accountId)
+  const filePath = path.join(dirPath, `${state.syncId}.json`)
 
-  await fs.mkdir(dirPath, { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(state, null, 2), "utf-8");
+  await fs.mkdir(dirPath, { recursive: true })
+  await fs.writeFile(filePath, JSON.stringify(state, null, 2), "utf-8")
 }
 
 /**
  * Read global cursor
  */
-export async function readGlobalCursor(config?: StorageConfig): Promise<GlobalCursor | null> {
-  const baseDir = await getStorageDir(config);
-  const filePath = path.join(baseDir, "cursor.json");
+export async function readGlobalCursor(
+  config?: StorageConfig,
+): Promise<GlobalCursor | null> {
+  const baseDir = await getStorageDir(config)
+  const filePath = path.join(baseDir, "cursor.json")
 
   try {
-    const content = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(content);
+    const content = await fs.readFile(filePath, "utf-8")
+    return JSON.parse(content)
   } catch {
-    return null;
+    return null
   }
 }
 
 /**
  * Write global cursor
  */
-export async function writeGlobalCursor(cursor: GlobalCursor, config?: StorageConfig): Promise<void> {
-  const baseDir = await getStorageDir(config);
-  const filePath = path.join(baseDir, "cursor.json");
+export async function writeGlobalCursor(
+  cursor: GlobalCursor,
+  config?: StorageConfig,
+): Promise<void> {
+  const baseDir = await getStorageDir(config)
+  const filePath = path.join(baseDir, "cursor.json")
 
-  await initializeStorage(config);
-  await fs.writeFile(filePath, JSON.stringify(cursor, null, 2), "utf-8");
+  await initializeStorage(config)
+  await fs.writeFile(filePath, JSON.stringify(cursor, null, 2), "utf-8")
 }
 
 /**
@@ -273,25 +289,25 @@ export async function writeGlobalCursor(cursor: GlobalCursor, config?: StorageCo
  */
 export function deduplicateTransactions(
   transactions: Transaction[],
-  windowHours: number = 24
+  windowHours: number = 24,
 ): Transaction[] {
-  const seen = new Set<string>();
-  const windowStart = Date.now() - windowHours * 60 * 60 * 1000;
-  const result: Transaction[] = [];
+  const seen = new Set<string>()
+  const windowStart = Date.now() - windowHours * 60 * 60 * 1000
+  const result: Transaction[] = []
 
   // Sort by date ascending
-  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
 
   for (const txn of sorted) {
-    const key = `${txn.accountId}_${txn.plaidTransactionId}`;
-    const txnDate = new Date(txn.date).getTime();
+    const key = `${txn.accountId}_${txn.plaidTransactionId}`
+    const txnDate = new Date(txn.date).getTime()
 
     // Only include if not seen, or outside deduplication window
     if (!seen.has(key) || txnDate > windowStart) {
-      seen.add(key);
-      result.push(txn);
+      seen.add(key)
+      result.push(txn)
     }
   }
 
-  return result;
+  return result
 }

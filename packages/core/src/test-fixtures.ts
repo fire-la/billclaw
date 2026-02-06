@@ -2,24 +2,21 @@
  * Test fixtures for BillClaw
  */
 
-import type {
-  AccountConfig,
-  BillclawConfig,
-} from "@fire-zu/billclaw-core";
+import type { AccountConfig, BillclawConfig } from "@fire-zu/billclaw-core"
 
 /**
  * Sample Plaid transaction data (external format)
  */
 export interface PlaidTransactionData {
-  transaction_id: string;
-  account_id: string;
-  date: string;
-  amount: number;
-  iso_currency_code: string;
-  category?: string[];
-  merchant_name?: string;
-  payment_channel?: string;
-  pending?: boolean;
+  transaction_id: string
+  account_id: string
+  date: string
+  amount: number
+  iso_currency_code: string
+  category?: string[]
+  merchant_name?: string
+  payment_channel?: string
+  pending?: boolean
 }
 
 export const mockPlaidTransactions: PlaidTransactionData[] = [
@@ -27,7 +24,7 @@ export const mockPlaidTransactions: PlaidTransactionData[] = [
     transaction_id: "plaid-txn-001",
     account_id: "plaid-acct-123",
     date: "2024-01-15",
-    amount: 125.50,
+    amount: 125.5,
     iso_currency_code: "USD",
     category: ["Food", "Restaurants"],
     merchant_name: "Test Restaurant",
@@ -45,7 +42,7 @@ export const mockPlaidTransactions: PlaidTransactionData[] = [
     payment_channel: "in store",
     pending: true,
   },
-];
+]
 
 /**
  * Sample account configurations
@@ -80,7 +77,7 @@ export const mockAccounts: AccountConfig[] = [
     enabled: false,
     syncFrequency: "manual",
   },
-];
+]
 
 /**
  * Sample complete configuration
@@ -122,7 +119,7 @@ export const mockConfig: BillclawConfig = {
     requireAmount: false,
     requireDate: false,
   },
-};
+}
 
 /**
  * Sample Gmail email content
@@ -157,4 +154,4 @@ export const mockGmailEmails = [
     `,
     date: "2024-01-16T14:30:00Z",
   },
-];
+]

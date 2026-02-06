@@ -12,10 +12,10 @@
  * - GoCardless access tokens
  */
 
-import type { Logger } from "../errors/errors.js";
+import type { Logger } from "../errors/errors.js"
 
 // Keytar is an optional dependency - will be installed by adapter
-let keytarModule: typeof import("keytar") | null = null;
+let keytarModule: typeof import("keytar") | null = null
 
 /**
  * Initialize keytar module
@@ -24,11 +24,11 @@ let keytarModule: typeof import("keytar") | null = null;
 export async function initKeytar(): Promise<void> {
   if (!keytarModule) {
     try {
-      keytarModule = await import("keytar");
+      keytarModule = await import("keytar")
     } catch (error) {
       throw new Error(
-        "keytar is not installed. Install it with: npm install keytar"
-      );
+        "keytar is not installed. Install it with: npm install keytar",
+      )
     }
   }
 }
@@ -36,7 +36,7 @@ export async function initKeytar(): Promise<void> {
 /**
  * Service name for BillClaw in keychain
  */
-const KEYCHAIN_SERVICE = "billclaw";
+const KEYCHAIN_SERVICE = "billclaw"
 
 /**
  * Store a credential in the platform keychain
@@ -48,22 +48,22 @@ const KEYCHAIN_SERVICE = "billclaw";
 export async function setCredential(
   key: string,
   value: string,
-  logger?: Logger
+  logger?: Logger,
 ): Promise<void> {
-  await initKeytar();
+  await initKeytar()
 
-  const keytar = keytarModule!;
+  const keytar = keytarModule!
 
   try {
-    await keytar.setPassword(KEYCHAIN_SERVICE, key, value);
-    logger?.debug?.(`Stored credential in keychain: ${key}`);
+    await keytar.setPassword(KEYCHAIN_SERVICE, key, value)
+    logger?.debug?.(`Stored credential in keychain: ${key}`)
   } catch (error) {
-    logger?.error?.(`Failed to store credential in keychain: ${key}`, error);
+    logger?.error?.(`Failed to store credential in keychain: ${key}`, error)
     throw new Error(
       `Failed to store credential in keychain: ${
         error instanceof Error ? error.message : String(error)
-      }`
-    );
+      }`,
+    )
   }
 }
 
@@ -76,29 +76,32 @@ export async function setCredential(
  */
 export async function getCredential(
   key: string,
-  logger?: Logger
+  logger?: Logger,
 ): Promise<string | null> {
-  await initKeytar();
+  await initKeytar()
 
-  const keytar = keytarModule!;
+  const keytar = keytarModule!
 
   try {
-    const value = await keytar.getPassword(KEYCHAIN_SERVICE, key);
+    const value = await keytar.getPassword(KEYCHAIN_SERVICE, key)
 
     if (value !== null) {
-      logger?.debug?.(`Retrieved credential from keychain: ${key}`);
+      logger?.debug?.(`Retrieved credential from keychain: ${key}`)
     } else {
-      logger?.debug?.(`Credential not found in keychain: ${key}`);
+      logger?.debug?.(`Credential not found in keychain: ${key}`)
     }
 
-    return value;
+    return value
   } catch (error) {
-    logger?.error?.(`Failed to retrieve credential from keychain: ${key}`, error);
+    logger?.error?.(
+      `Failed to retrieve credential from keychain: ${key}`,
+      error,
+    )
     throw new Error(
       `Failed to retrieve credential from keychain: ${
         error instanceof Error ? error.message : String(error)
-      }`
-    );
+      }`,
+    )
   }
 }
 
@@ -111,29 +114,31 @@ export async function getCredential(
  */
 export async function deleteCredential(
   key: string,
-  logger?: Logger
+  logger?: Logger,
 ): Promise<boolean> {
-  await initKeytar();
+  await initKeytar()
 
-  const keytar = keytarModule!;
+  const keytar = keytarModule!
 
   try {
-    const result = await keytar.deletePassword(KEYCHAIN_SERVICE, key);
+    const result = await keytar.deletePassword(KEYCHAIN_SERVICE, key)
 
     if (result) {
-      logger?.debug?.(`Deleted credential from keychain: ${key}`);
+      logger?.debug?.(`Deleted credential from keychain: ${key}`)
     } else {
-      logger?.debug?.(`Credential not found in keychain (could not delete): ${key}`);
+      logger?.debug?.(
+        `Credential not found in keychain (could not delete): ${key}`,
+      )
     }
 
-    return result;
+    return result
   } catch (error) {
-    logger?.error?.(`Failed to delete credential from keychain: ${key}`, error);
+    logger?.error?.(`Failed to delete credential from keychain: ${key}`, error)
     throw new Error(
       `Failed to delete credential from keychain: ${
         error instanceof Error ? error.message : String(error)
-      }`
-    );
+      }`,
+    )
   }
 }
 
@@ -146,10 +151,10 @@ export async function deleteCredential(
  */
 export async function hasCredential(
   key: string,
-  logger?: Logger
+  logger?: Logger,
 ): Promise<boolean> {
-  const value = await getCredential(key, logger);
-  return value !== null;
+  const value = await getCredential(key, logger)
+  return value !== null
 }
 
 /**
@@ -164,7 +169,7 @@ export async function hasCredential(
 export async function listCredentialKeys(): Promise<string[]> {
   // keytar doesn't support listing keys
   // Applications should maintain their own registry
-  return [];
+  return []
 }
 
 /**
@@ -177,15 +182,15 @@ export async function listCredentialKeys(): Promise<string[]> {
  */
 export async function clearAllCredentials(
   keys: string[],
-  logger?: Logger
+  logger?: Logger,
 ): Promise<void> {
-  logger?.warn?.(`Clearing ${keys.length} credentials from keychain`);
+  logger?.warn?.(`Clearing ${keys.length} credentials from keychain`)
 
   for (const key of keys) {
-    await deleteCredential(key, logger);
+    await deleteCredential(key, logger)
   }
 
-  logger?.info?.(`Cleared all credentials from keychain`);
+  logger?.info?.(`Cleared all credentials from keychain`)
 }
 
 /**
@@ -196,27 +201,27 @@ export const KeychainKeys = {
    * Build a Plaid access token key
    */
   plaidAccessToken(accountId: string): string {
-    return `plaid_access_token:${accountId}`;
+    return `plaid_access_token:${accountId}`
   },
 
   /**
    * Build a Gmail refresh token key
    */
   gmailRefreshToken(accountId: string): string {
-    return `gmail_refresh_token:${accountId}`;
+    return `gmail_refresh_token:${accountId}`
   },
 
   /**
    * Build a GoCardless access token key
    */
   gocardlessAccessToken(accountId: string): string {
-    return `gocardless_access_token:${accountId}`;
+    return `gocardless_access_token:${accountId}`
   },
 
   /**
    * Build a GoCardless requisition ID key
    */
   gocardlessRequisitionId(accountId: string): string {
-    return `gocardless_requisition_id:${accountId}`;
+    return `gocardless_requisition_id:${accountId}`
   },
-};
+}

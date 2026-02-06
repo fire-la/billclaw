@@ -4,22 +4,22 @@
  * Simple in-memory event emitter for CLI usage.
  */
 
-import type { EventEmitter } from "@fire-zu/billclaw-core";
+import type { EventEmitter } from "@fire-zu/billclaw-core"
 
 /**
  * CLI event emitter implementation
  */
 export class CliEventEmitter implements EventEmitter {
-  private listeners = new Map<string, Set<(...args: any[]) => void>>();
+  private listeners = new Map<string, Set<(...args: any[]) => void>>()
 
   emit(event: string, data?: unknown): void {
-    const handlers = this.listeners.get(event);
+    const handlers = this.listeners.get(event)
     if (handlers) {
       for (const handler of handlers) {
         try {
-          handler(data);
+          handler(data)
         } catch (error) {
-          console.error(`Error in event handler for ${event}:`, error);
+          console.error(`Error in event handler for ${event}:`, error)
         }
       }
     }
@@ -27,15 +27,15 @@ export class CliEventEmitter implements EventEmitter {
 
   on(event: string, handler: (...args: any[]) => void): void {
     if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set());
+      this.listeners.set(event, new Set())
     }
-    this.listeners.get(event)!.add(handler);
+    this.listeners.get(event)!.add(handler)
   }
 
   off(event: string, handler: (...args: any[]) => void): void {
-    const handlers = this.listeners.get(event);
+    const handlers = this.listeners.get(event)
     if (handlers) {
-      handlers.delete(handler);
+      handlers.delete(handler)
     }
   }
 
@@ -44,9 +44,9 @@ export class CliEventEmitter implements EventEmitter {
    */
   removeAll(event?: string): void {
     if (event) {
-      this.listeners.delete(event);
+      this.listeners.delete(event)
     } else {
-      this.listeners.clear();
+      this.listeners.clear()
     }
   }
 
@@ -54,6 +54,6 @@ export class CliEventEmitter implements EventEmitter {
    * Get the count of listeners for an event
    */
   listenerCount(event: string): number {
-    return this.listeners.get(event)?.size ?? 0;
+    return this.listeners.get(event)?.size ?? 0
   }
 }

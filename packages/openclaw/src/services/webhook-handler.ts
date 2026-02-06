@@ -6,44 +6,46 @@
  * configured external webhook endpoints.
  */
 
-import type { OpenClawPluginApi } from "../types/openclaw-plugin.js";
-import { emitEvent, verifySignature } from "@fire-zu/billclaw-core";
-import type { WebhookEventType } from "@fire-zu/billclaw-core";
+import type { OpenClawPluginApi } from "../types/openclaw-plugin.js"
+import { emitEvent, verifySignature } from "@fire-zu/billclaw-core"
+import type { WebhookEventType } from "@fire-zu/billclaw-core"
 
 /**
  * Dependencies for webhook handlers
  */
 interface WebhookHandlerDependencies {
-  api: OpenClawPluginApi;
-  plaidWebhookSecret?: string;
+  api: OpenClawPluginApi
+  plaidWebhookSecret?: string
 }
 
 // Global API reference for webhook handlers
-let api: OpenClawPluginApi | null = null;
-let configWebhooks: any[] = [];
-let plaidWebhookSecret: string | undefined;
+let api: OpenClawPluginApi | null = null
+let configWebhooks: any[] = []
+let plaidWebhookSecret: string | undefined
 
 /**
  * Convert OpenClaw logger to BillClaw Logger interface
  */
-function toLogger(logger: OpenClawPluginApi["logger"] | undefined): {
-  info: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
-  debug: (...args: unknown[]) => void;
+function toLogger(
+  logger: OpenClawPluginApi["logger"] | undefined,
+): {
+  info: (...args: unknown[]) => void
+  error: (...args: unknown[]) => void
+  warn: (...args: unknown[]) => void
+  debug: (...args: unknown[]) => void
 } {
   // Ensure all methods are defined and callable
-  const log = logger?.info || (() => {});
-  const logError = logger?.error || (() => {});
-  const logWarn = logger?.warn || (() => console.warn);
-  const logDebug = logger?.debug || (() => {});
+  const log = logger?.info || (() => {})
+  const logError = logger?.error || (() => {})
+  const logWarn = logger?.warn || (() => console.warn)
+  const logDebug = logger?.debug || (() => {})
 
   return {
     info: log,
     error: logError,
     warn: logWarn,
     debug: logDebug,
-  };
+  }
 }
 
 /**
@@ -54,15 +56,17 @@ function toLogger(logger: OpenClawPluginApi["logger"] | undefined): {
  * - /webhook/gocardless - GoCardless webhook handler
  * - /webhook/test - Test webhook endpoint
  */
-export function registerWebhookHandlers(dependencies: WebhookHandlerDependencies): void {
-  api = dependencies.api;
-  plaidWebhookSecret = dependencies.plaidWebhookSecret;
+export function registerWebhookHandlers(
+  dependencies: WebhookHandlerDependencies,
+): void {
+  api = dependencies.api
+  plaidWebhookSecret = dependencies.plaidWebhookSecret
 
   // Get webhooks from config
-  const pluginConfig = api.pluginConfig as any;
-  configWebhooks = pluginConfig?.webhooks || [];
+  const pluginConfig = api.pluginConfig as any
+  configWebhooks = pluginConfig?.webhooks || []
 
-  api.logger.info?.("billclaw webhook handler registered");
+  api.logger.info?.("billclaw webhook handler registered")
 
   // Register HTTP routes
   api.http?.register({
@@ -70,21 +74,21 @@ export function registerWebhookHandlers(dependencies: WebhookHandlerDependencies
     method: "POST",
     description: "Plaid webhook handler",
     handler: handlePlaidWebhook,
-  });
+  })
 
   api.http?.register({
     path: "/webhook/gocardless",
     method: "POST",
     description: "GoCardless webhook handler",
     handler: handleGoCardlessWebhook,
-  });
+  })
 
   api.http?.register({
     path: "/webhook/test",
     method: "POST",
     description: "Test webhook endpoint",
     handler: handleTestWebhook,
-  });
+  })
 }
 
 /**
@@ -96,25 +100,30 @@ export function registerWebhookHandlers(dependencies: WebhookHandlerDependencies
  * - ITEM/LOGIN_REQUIRED: Notify user to re-authenticate
  */
 async function handlePlaidWebhook(request: {
-  body: unknown;
-  headers: Record<string, string>;
-  query: Record<string, string>;
-}): Promise<{ status: number; body: { received: boolean; error?: string } }> {
+  body: unknown
+  headers: Record<string, string>
+  query: Record<string, string>
+}): Promise<{ status: number body: { received: boolean error?: string } }> {
   try {
-    const body = request.body as any;
-    const webhookType = body.webhook_type;
-    const webhookCode = body.webhook_code;
-    const itemId = body.item_id;
+    const body = request.body as any
+    const webhookType = body.webhook_type
+    const webhookCode = body.webhook_code
+    const itemId = body.item_id
 
-    api?.logger.info?.(`Received Plaid webhook: ${webhookType}.${webhookCode} for item ${itemId}`);
+    api?.logger.info?.(
+      `Received Plaid webhook: ${webhookType}.${webhookCode} for item ${itemId}`,
+    )
 
     // Verify signature if configured
-    const signature = request.headers["plaid-verification"];
-    const timestamp = request.headers["plaid-timestamp"];
+    const signature = request.headers["plaid-verification"]
+    const timestamp = request.headers["plaid-timestamp"]
     if (plaidWebhookSecret && signature && timestamp) {
-      const payload = JSON.stringify(body);
+      const payload = JSON.stringify(body)
       if (!verifySignature(payload, signature, plaidWebhookSecret)) {
-        return { status: 401, body: { received: false, error: "Invalid signature" } };
+        return {
+          status: 401,
+          body: { received: false, error: "Invalid signature" },
+        }
       }
     }
 
@@ -123,42 +132,52 @@ async function handlePlaidWebhook(request: {
       case "TRANSACTIONS":
         if (webhookCode === "SYNC_UPDATES_AVAILABLE") {
           // Find the account associated with this item
-          const pluginConfig = api?.pluginConfig as any;
+          const pluginConfig = api?.pluginConfig as any
           const account = pluginConfig?.accounts?.find(
-            (acc: any) => acc.type === "plaid" && acc.plaidItemId === itemId && acc.enabled,
-          );
+            (acc: any) =>
+              acc.type === "plaid" && acc.plaidItemId === itemId && acc.enabled,
+          )
 
           if (account && api) {
             // Trigger async sync (don't wait for completion)
-            const { plaidSyncTool } = await import("../tools/index.js");
-            plaidSyncTool.execute(api, { accountId: account.id }).catch((error) => {
-              api?.logger.error?.(`Webhook-triggered sync failed:`, error);
-            });
+            const { plaidSyncTool } = await import("../tools/index.js")
+            plaidSyncTool
+              .execute(api, { accountId: account.id })
+              .catch((error) => {
+                api?.logger.error?.(`Webhook-triggered sync failed:`, error)
+              })
           }
         }
-        break;
+        break
 
       case "ITEM":
         if (webhookCode === "ERROR" || webhookCode === "LOGIN_REQUIRED") {
           const error = body.error ?? {
             error_code: webhookCode,
             error_message: "Item login required",
-          };
+          }
           // Emit account error event
           await emitEvent(
             toLogger(api!.logger),
             configWebhooks,
             "account.error" as WebhookEventType,
-            { accountId: itemId, accountType: "plaid", error: JSON.stringify(error) },
-          ).catch((err) => api?.logger.debug?.(`Event emission failed:`, err));
+            {
+              accountId: itemId,
+              accountType: "plaid",
+              error: JSON.stringify(error),
+            },
+          ).catch((err) => api?.logger.debug?.(`Event emission failed:`, err))
         }
-        break;
+        break
     }
 
-    return { status: 200, body: { received: true } };
+    return { status: 200, body: { received: true } }
   } catch (error) {
-    api?.logger.error?.(`Error handling Plaid webhook:`, error);
-    return { status: 500, body: { received: false, error: "Internal server error" } };
+    api?.logger.error?.(`Error handling Plaid webhook:`, error)
+    return {
+      status: 500,
+      body: { received: false, error: "Internal server error" },
+    }
   }
 }
 
@@ -168,22 +187,22 @@ async function handlePlaidWebhook(request: {
  * Processes webhooks from GoCardless (placeholder implementation)
  */
 async function handleGoCardlessWebhook(_request: {
-  body: unknown;
-  headers: Record<string, string>;
-  query: Record<string, string>;
-}): Promise<{ status: number; body: { received: boolean } }> {
+  body: unknown
+  headers: Record<string, string>
+  query: Record<string, string>
+}): Promise<{ status: number body: { received: boolean } }> {
   try {
-    api?.logger.info?.("Received GoCardless webhook");
+    api?.logger.info?.("Received GoCardless webhook")
 
     // TODO: Implement GoCardless webhook handling
     // - Verify signature
     // - Process mandate events
     // - Trigger sync if needed
 
-    return { status: 200, body: { received: true } };
+    return { status: 200, body: { received: true } }
   } catch (error) {
-    api?.logger.error?.(`Error handling GoCardless webhook:`, error);
-    return { status: 500, body: { received: false } };
+    api?.logger.error?.(`Error handling GoCardless webhook:`, error)
+    return { status: 500, body: { received: false } }
   }
 }
 
@@ -193,22 +212,30 @@ async function handleGoCardlessWebhook(_request: {
  * Sends a test event to all configured webhooks to verify connectivity
  */
 async function handleTestWebhook(_request: {
-  body: unknown;
-  headers: Record<string, string>;
-  query: Record<string, string>;
-}): Promise<{ status: number; body: { sent: boolean; error?: string } }> {
+  body: unknown
+  headers: Record<string, string>
+  query: Record<string, string>
+}): Promise<{ status: number body: { sent: boolean error?: string } }> {
   try {
-    api?.logger.info?.("Received test webhook request");
+    api?.logger.info?.("Received test webhook request")
 
     // Emit test event to all configured webhooks
-    await emitEvent(toLogger(api!.logger), configWebhooks, "webhook.test" as WebhookEventType, {
-      message: "Test webhook from BillClaw",
-      triggeredBy: "user",
-    });
+    await emitEvent(
+      toLogger(api!.logger),
+      configWebhooks,
+      "webhook.test" as WebhookEventType,
+      {
+        message: "Test webhook from BillClaw",
+        triggeredBy: "user",
+      },
+    )
 
-    return { status: 200, body: { sent: true } };
+    return { status: 200, body: { sent: true } }
   } catch (error) {
-    api?.logger.error?.(`Error handling test webhook:`, error);
-    return { status: 500, body: { sent: false, error: "Internal server error" } };
+    api?.logger.error?.(`Error handling test webhook:`, error)
+    return {
+      status: 500,
+      body: { sent: false, error: "Internal server error" },
+    }
   }
 }

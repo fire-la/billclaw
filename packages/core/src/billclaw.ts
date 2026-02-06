@@ -5,53 +5,64 @@
  * It is framework-agnostic and can be used by any adapter (CLI, OpenClaw, etc.).
  */
 
-import type { AccountConfig } from "./models/config.js";
-import type { Logger } from "./errors/errors.js";
-import type { RuntimeContext, ConfigProvider } from "./runtime/types.js";
-import type { Transaction, SyncState } from "./storage/transaction-storage.js";
-import type { PlaidSyncResult, PlaidConfig, PlaidAccount } from "./sources/plaid/plaid-sync.js";
-import type { GmailFetchResult, GmailConfig, GmailAccount } from "./sources/gmail/gmail-fetch.js";
-import type { SyncResult } from "./sync/sync-service.js";
+import type { AccountConfig } from "./models/config.js"
+import type { Logger } from "./errors/errors.js"
+import type { RuntimeContext, ConfigProvider } from "./runtime/types.js"
+import type { Transaction, SyncState } from "./storage/transaction-storage.js"
+import type {
+  PlaidSyncResult,
+  PlaidConfig,
+  PlaidAccount,
+} from "./sources/plaid/plaid-sync.js"
+import type {
+  GmailFetchResult,
+  GmailConfig,
+  GmailAccount,
+} from "./sources/gmail/gmail-fetch.js"
+import type { SyncResult } from "./sync/sync-service.js"
 
 // Storage
 import {
   readTransactions,
   readSyncStates,
   initializeStorage,
-} from "./storage/transaction-storage.js";
+} from "./storage/transaction-storage.js"
 
 // Sync
-import { syncDueAccounts } from "./sync/sync-service.js";
+import { syncDueAccounts } from "./sync/sync-service.js"
 
 // Sources
-import { syncPlaidAccounts } from "./sources/plaid/plaid-sync.js";
-import { fetchGmailBills } from "./sources/gmail/gmail-fetch.js";
+import { syncPlaidAccounts } from "./sources/plaid/plaid-sync.js"
+import { fetchGmailBills } from "./sources/gmail/gmail-fetch.js"
 
 // Exporters
-import { exportStorageToBeancount, exportStorageToLedger } from "./exporters/index.js";
+import {
+  exportStorageToBeancount,
+  exportStorageToLedger,
+} from "./exporters/index.js"
 
 /**
  * BillClaw - Main class for financial data import
  */
 export class Billclaw {
-  private readonly context: RuntimeContext;
+  private readonly context: RuntimeContext
 
   constructor(context: RuntimeContext) {
-    this.context = context;
+    this.context = context
   }
 
   /**
    * Get the logger
    */
   get logger(): Logger {
-    return this.context.logger;
+    return this.context.logger
   }
 
   /**
    * Get the config provider
    */
   get config(): ConfigProvider {
-    return this.context.config;
+    return this.context.config
   }
 
   // ==================== Storage ====================
@@ -60,17 +71,17 @@ export class Billclaw {
    * Initialize the storage directory structure
    */
   async initializeStorage(): Promise<void> {
-    const storageConfig = await this.context.config.getStorageConfig();
-    await initializeStorage(storageConfig);
-    this.logger.info?.("Storage initialized");
+    const storageConfig = await this.context.config.getStorageConfig()
+    await initializeStorage(storageConfig)
+    this.logger.info?.("Storage initialized")
   }
 
   /**
    * Get all registered accounts
    */
   async getAccounts(): Promise<any[]> {
-    const config = await this.context.config.getConfig();
-    return config.accounts || [];
+    const config = await this.context.config.getConfig()
+    return config.accounts || []
   }
 
   /**
@@ -79,18 +90,18 @@ export class Billclaw {
   async getTransactions(
     accountId: string,
     year: number,
-    month: number
+    month: number,
   ): Promise<Transaction[]> {
-    const storageConfig = await this.context.config.getStorageConfig();
-    return readTransactions(accountId, year, month, storageConfig);
+    const storageConfig = await this.context.config.getStorageConfig()
+    return readTransactions(accountId, year, month, storageConfig)
   }
 
   /**
    * Get sync states for an account
    */
   async getSyncStates(accountId: string): Promise<SyncState[]> {
-    const storageConfig = await this.context.config.getStorageConfig();
-    return readSyncStates(accountId, storageConfig);
+    const storageConfig = await this.context.config.getStorageConfig()
+    return readSyncStates(accountId, storageConfig)
   }
 
   // ==================== Sync ====================
@@ -99,8 +110,8 @@ export class Billclaw {
    * Sync provider interface - implemented by adapters
    */
   async syncAccount(accountId: string): Promise<SyncResult> {
-    const config = await this.context.config.getConfig();
-    const account = config.accounts.find((a) => a.id === accountId);
+    const config = await this.context.config.getConfig()
+    const account = config.accounts.find((a) => a.id === accountId)
 
     if (!account) {
       return {
@@ -109,15 +120,15 @@ export class Billclaw {
         transactionsAdded: 0,
         transactionsUpdated: 0,
         errors: [`Account not found: ${accountId}`],
-      };
+      }
     }
 
     switch (account.type) {
       case "plaid":
-        return await this.syncPlaidAccount(account);
+        return await this.syncPlaidAccount(account)
 
       case "gmail":
-        return await this.syncGmailAccount(account);
+        return await this.syncGmailAccount(account)
 
       default:
         return {
@@ -126,7 +137,7 @@ export class Billclaw {
           transactionsAdded: 0,
           transactionsUpdated: 0,
           errors: [`Unsupported account type: ${account.type}`],
-        };
+        }
     }
   }
 
@@ -134,8 +145,8 @@ export class Billclaw {
    * Sync all accounts that are due
    */
   async syncDueAccounts(): Promise<SyncResult[]> {
-    const config = await this.context.config.getConfig();
-    return syncDueAccounts(config.accounts, this, this.logger);
+    const config = await this.context.config.getConfig()
+    return syncDueAccounts(config.accounts, this, this.logger)
   }
 
   // ==================== Plaid ====================
@@ -144,14 +155,14 @@ export class Billclaw {
    * Sync Plaid accounts
    */
   async syncPlaid(accountIds?: string[]): Promise<PlaidSyncResult[]> {
-    const config = await this.context.config.getConfig();
-    const storageConfig = await this.context.config.getStorageConfig();
+    const config = await this.context.config.getConfig()
+    const storageConfig = await this.context.config.getStorageConfig()
 
     const plaidConfig: PlaidConfig = {
       clientId: config.plaid.clientId || process.env.PLAID_CLIENT_ID || "",
       secret: config.plaid.secret || process.env.PLAID_SECRET || "",
       environment: config.plaid.environment || "sandbox",
-    };
+    }
 
     const accounts: PlaidAccount[] = config.accounts
       .filter((a) => a.type === "plaid" && a.enabled && a.plaidAccessToken)
@@ -159,11 +170,11 @@ export class Billclaw {
       .map((a) => ({
         id: a.id,
         plaidAccessToken: a.plaidAccessToken!,
-      }));
+      }))
 
     if (accounts.length === 0) {
-      this.logger.warn?.("No enabled Plaid accounts found");
-      return [];
+      this.logger.warn?.("No enabled Plaid accounts found")
+      return []
     }
 
     return syncPlaidAccounts(
@@ -171,16 +182,16 @@ export class Billclaw {
       plaidConfig,
       storageConfig,
       this.logger,
-      config.webhooks || []
-    );
+      config.webhooks || [],
+    )
   }
 
   /**
    * Sync a single Plaid account
    */
   private async syncPlaidAccount(account: AccountConfig): Promise<SyncResult> {
-    const results = await this.syncPlaid([account.id]);
-    const result = results[0];
+    const results = await this.syncPlaid([account.id])
+    const result = results[0]
 
     return {
       accountId: result.accountId,
@@ -188,7 +199,7 @@ export class Billclaw {
       transactionsAdded: result.transactionsAdded,
       transactionsUpdated: result.transactionsUpdated,
       errors: result.errors,
-    };
+    }
   }
 
   // ==================== Gmail ====================
@@ -196,9 +207,12 @@ export class Billclaw {
   /**
    * Sync Gmail accounts
    */
-  async syncGmail(accountIds?: string[], days: number = 30): Promise<GmailFetchResult[]> {
-    const config = await this.context.config.getConfig();
-    const storageConfig = await this.context.config.getStorageConfig();
+  async syncGmail(
+    accountIds?: string[],
+    days: number = 30,
+  ): Promise<GmailFetchResult[]> {
+    const config = await this.context.config.getConfig()
+    const storageConfig = await this.context.config.getStorageConfig()
 
     const gmailConfig: GmailConfig = config.gmail || {
       senderWhitelist: [],
@@ -206,7 +220,7 @@ export class Billclaw {
       confidenceThreshold: 0.5,
       requireAmount: false,
       requireDate: false,
-    };
+    }
 
     const accounts: GmailAccount[] = config.accounts
       .filter((a) => a.type === "gmail" && a.enabled)
@@ -214,14 +228,14 @@ export class Billclaw {
       .map((a) => ({
         id: a.id,
         gmailEmailAddress: a.gmailEmailAddress || "",
-      }));
+      }))
 
     if (accounts.length === 0) {
-      this.logger.warn?.("No enabled Gmail accounts found");
-      return [];
+      this.logger.warn?.("No enabled Gmail accounts found")
+      return []
     }
 
-    const results: GmailFetchResult[] = [];
+    const results: GmailFetchResult[] = []
 
     for (const account of accounts) {
       const result = await fetchGmailBills(
@@ -229,20 +243,20 @@ export class Billclaw {
         days,
         gmailConfig,
         storageConfig,
-        this.logger
-      );
-      results.push(result);
+        this.logger,
+      )
+      results.push(result)
     }
 
-    return results;
+    return results
   }
 
   /**
    * Sync a single Gmail account
    */
   private async syncGmailAccount(account: AccountConfig): Promise<SyncResult> {
-    const results = await this.syncGmail([account.id]);
-    const result = results[0];
+    const results = await this.syncGmail([account.id])
+    const result = results[0]
 
     return {
       accountId: result.accountId,
@@ -250,7 +264,7 @@ export class Billclaw {
       transactionsAdded: result.transactionsAdded,
       transactionsUpdated: result.transactionsUpdated,
       errors: result.errors,
-    };
+    }
   }
 
   // ==================== Exporters ====================
@@ -262,10 +276,16 @@ export class Billclaw {
     accountId: string,
     year: number,
     month: number,
-    options?: Partial<any>
+    options?: Partial<any>,
   ): Promise<string> {
-    const storageConfig = await this.context.config.getStorageConfig();
-    return exportStorageToBeancount(accountId, year, month, storageConfig, options);
+    const storageConfig = await this.context.config.getStorageConfig()
+    return exportStorageToBeancount(
+      accountId,
+      year,
+      month,
+      storageConfig,
+      options,
+    )
   }
 
   /**
@@ -275,9 +295,9 @@ export class Billclaw {
     accountId: string,
     year: number,
     month: number,
-    options?: Partial<any>
+    options?: Partial<any>,
   ): Promise<string> {
-    const storageConfig = await this.context.config.getStorageConfig();
-    return exportStorageToLedger(accountId, year, month, storageConfig, options);
+    const storageConfig = await this.context.config.getStorageConfig()
+    return exportStorageToLedger(accountId, year, month, storageConfig, options)
   }
 }

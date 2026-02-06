@@ -37,23 +37,23 @@ export enum ErrorCategory {
  * User-friendly error with recovery suggestions
  */
 export interface UserError {
-  type: "UserError"; // Type discriminator
-  category: ErrorCategory;
-  title: string;
-  message: string;
-  suggestions: string[];
-  docsLink?: string;
-  error?: Error; // Original error for debugging
+  type: "UserError" // Type discriminator
+  category: ErrorCategory
+  title: string
+  message: string
+  suggestions: string[]
+  docsLink?: string
+  error?: Error // Original error for debugging
 }
 
 /**
  * Logger interface for framework-agnostic logging
  */
 export interface Logger {
-  info(...args: unknown[]): void;
-  error(...args: unknown[]): void;
-  warn(...args: unknown[]): void;
-  debug(...args: unknown[]): void;
+  info(...args: unknown[]): void
+  error(...args: unknown[]): void
+  warn(...args: unknown[]): void
+  debug(...args: unknown[]): void
 }
 
 /**
@@ -65,7 +65,7 @@ export function createUserError(
   message: string,
   suggestions: string[],
   docsLink?: string,
-  originalError?: Error
+  originalError?: Error,
 ): UserError {
   return {
     type: "UserError",
@@ -75,39 +75,39 @@ export function createUserError(
     suggestions,
     docsLink,
     error: originalError,
-  };
+  }
 }
 
 /**
  * Format error for display to user
  */
 export function formatError(error: UserError): string {
-  const lines: string[] = [];
+  const lines: string[] = []
 
   // Header with category emoji
-  const categoryEmoji = getCategoryEmoji(error.category);
-  lines.push(`${categoryEmoji} ${error.title}`);
-  lines.push("");
+  const categoryEmoji = getCategoryEmoji(error.category)
+  lines.push(`${categoryEmoji} ${error.title}`)
+  lines.push("")
 
   // Message
-  lines.push(error.message);
-  lines.push("");
+  lines.push(error.message)
+  lines.push("")
 
   // Suggestions
   if (error.suggestions.length > 0) {
-    lines.push("Suggestions:");
+    lines.push("Suggestions:")
     for (let i = 0; i < error.suggestions.length; i++) {
-      lines.push(`   ${i + 1}. ${error.suggestions[i]}`);
+      lines.push(`   ${i + 1}. ${error.suggestions[i]}`)
     }
   }
 
   // Docs link
   if (error.docsLink) {
-    lines.push("");
-    lines.push(`Learn more: ${error.docsLink}`);
+    lines.push("")
+    lines.push(`Learn more: ${error.docsLink}`)
   }
 
-  return lines.join("\n");
+  return lines.join("\n")
 }
 
 /**
@@ -126,26 +126,30 @@ function getCategoryEmoji(category: ErrorCategory): string {
     [ErrorCategory.STORAGE]: "💾",
     [ErrorCategory.FILE_SYSTEM]: "📁",
     [ErrorCategory.UNKNOWN]: "❓",
-  };
-  return emojis[category] || "❓";
+  }
+  return emojis[category] || "❓"
 }
 
 /**
  * Parse Plaid error codes and create user-friendly errors
  */
 export function parsePlaidError(error: {
-  error_code?: string;
-  error_message?: string;
-  error_type?: string;
-  display_message?: string;
-  request_id?: string;
+  error_code?: string
+  error_message?: string
+  error_type?: string
+  display_message?: string
+  request_id?: string
 }): UserError {
-  const errorCode = error.error_code || "UNKNOWN";
-  const errorMessage = error.error_message || error.display_message || "An error occurred";
-  const requestId = error.request_id;
+  const errorCode = error.error_code || "UNKNOWN"
+  const errorMessage =
+    error.error_message || error.display_message || "An error occurred"
+  const requestId = error.request_id
 
   // Login required
-  if (errorCode === "ITEM_LOGIN_REQUIRED" || error.error_type === "ITEM_LOGIN_REQUIRED") {
+  if (
+    errorCode === "ITEM_LOGIN_REQUIRED" ||
+    error.error_type === "ITEM_LOGIN_REQUIRED"
+  ) {
     return createUserError(
       ErrorCategory.PLAID_AUTH,
       "Account Re-Authentication Required",
@@ -155,12 +159,15 @@ export function parsePlaidError(error: {
         "This will open a secure browser window where you can log into your bank",
         "After re-authentication, your transactions will sync normally",
       ],
-      "https://plaid.com/docs/errors/#item-login-required"
-    );
+      "https://plaid.com/docs/errors/#item-login-required",
+    )
   }
 
   // Invalid credentials
-  if (errorCode === "INVALID_ACCESS_TOKEN" || error.error_type === "INVALID_ACCESS_TOKEN") {
+  if (
+    errorCode === "INVALID_ACCESS_TOKEN" ||
+    error.error_type === "INVALID_ACCESS_TOKEN"
+  ) {
     return createUserError(
       ErrorCategory.PLAID_AUTH,
       "Invalid Access Token",
@@ -169,8 +176,8 @@ export function parsePlaidError(error: {
         "Run your adapter's setup command to reconnect your account",
         "If this persists, remove and re-add the account",
       ],
-      "https://plaid.com/docs/errors/#invalid-access-token"
-    );
+      "https://plaid.com/docs/errors/#invalid-access-token",
+    )
   }
 
   // Product not ready
@@ -183,8 +190,8 @@ export function parsePlaidError(error: {
         "Wait a few minutes and try again",
         "If this persists, contact Plaid support",
       ],
-      "https://plaid.com/docs/errors/#product-not-ready"
-    );
+      "https://plaid.com/docs/errors/#product-not-ready",
+    )
   }
 
   // Rate limit
@@ -198,8 +205,8 @@ export function parsePlaidError(error: {
         "Consider syncing less frequently (e.g., daily instead of hourly)",
         "If you need higher rate limits, upgrade your Plaid plan",
       ],
-      "https://plaid.com/docs/errors/#rate-limit-exceeded"
-    );
+      "https://plaid.com/docs/errors/#rate-limit-exceeded",
+    )
   }
 
   // Institution down
@@ -213,8 +220,8 @@ export function parsePlaidError(error: {
         "Check your bank's website for service status updates",
         "Your transactions will sync automatically once the bank is back online",
       ],
-      undefined
-    );
+      undefined,
+    )
   }
 
   // Invalid credentials
@@ -227,8 +234,8 @@ export function parsePlaidError(error: {
         "Configure your Plaid client ID and secret",
         "Verify your credentials at https://dashboard.plaid.com",
       ],
-      "https://dashboard.plaid.com"
-    );
+      "https://dashboard.plaid.com",
+    )
   }
 
   // Generic Plaid error
@@ -240,19 +247,19 @@ export function parsePlaidError(error: {
       "Try again in a few minutes",
       "Check Plaid status at https://status.plaid.com",
     ],
-    "https://plaid.com/docs/errors/"
-  );
+    "https://plaid.com/docs/errors/",
+  )
 }
 
 /**
  * Parse Gmail API errors and create user-friendly errors
  */
 export function parseGmailError(error: {
-  code?: number;
-  message?: string;
-  status?: number;
+  code?: number
+  message?: string
+  status?: number
 }): UserError {
-  const statusCode = error.status || error.code || 0;
+  const statusCode = error.status || error.code || 0
 
   // Unauthorized
   if (statusCode === 401) {
@@ -265,8 +272,8 @@ export function parseGmailError(error: {
         "Make sure you grant read-only access to your Gmail",
         "Check that Google Cloud OAuth credentials are valid",
       ],
-      "https://developers.google.com/gmail/api/auth"
-    );
+      "https://developers.google.com/gmail/api/auth",
+    )
   }
 
   // Forbidden
@@ -280,8 +287,8 @@ export function parseGmailError(error: {
         "Verify that the OAuth consent screen includes 'gmail.readonly' scope",
         "Re-authenticate to grant proper permissions",
       ],
-      "https://developers.google.com/gmail/api/auth"
-    );
+      "https://developers.google.com/gmail/api/auth",
+    )
   }
 
   // Not found
@@ -295,8 +302,8 @@ export function parseGmailError(error: {
         "Check that the API name is correct: 'gmail.api'",
         "Try re-enabling the Gmail API in Google Cloud Console",
       ],
-      "https://console.cloud.google.com/apis/library/gmail-api"
-    );
+      "https://console.cloud.google.com/apis/library/gmail-api",
+    )
   }
 
   // Rate limit
@@ -311,8 +318,8 @@ export function parseGmailError(error: {
         "Consider using Gmail push notifications instead of polling",
         "Free tier: 250 quota units/day",
       ],
-      "https://developers.google.com/gmail/api/v1/quota"
-    );
+      "https://developers.google.com/gmail/api/v1/quota",
+    )
   }
 
   // Generic Gmail error
@@ -325,18 +332,21 @@ export function parseGmailError(error: {
       "Verify Gmail API is enabled in Google Cloud Console",
       "Try again in a few minutes",
     ],
-    "https://developers.google.com/gmail/api"
-  );
+    "https://developers.google.com/gmail/api",
+  )
 }
 
 /**
  * Parse network errors
  */
 export function parseNetworkError(error: Error): UserError {
-  const message = error.message.toLowerCase();
+  const message = error.message.toLowerCase()
 
   // Connection refused
-  if (message.includes("econnrefused") || message.includes("connection refused")) {
+  if (
+    message.includes("econnrefused") ||
+    message.includes("connection refused")
+  ) {
     return createUserError(
       ErrorCategory.NETWORK,
       "Connection Refused",
@@ -347,8 +357,8 @@ export function parseNetworkError(error: Error): UserError {
         "If using a VPN, try disconnecting it",
         "Check if the service is temporarily down",
       ],
-      undefined
-    );
+      undefined,
+    )
   }
 
   // Timeout
@@ -362,8 +372,8 @@ export function parseNetworkError(error: Error): UserError {
         "Try again in a few minutes",
         "If syncing many transactions, consider reducing the date range",
       ],
-      undefined
-    );
+      undefined,
+    )
   }
 
   // DNS resolution failed
@@ -378,8 +388,8 @@ export function parseNetworkError(error: Error): UserError {
         "Flush your DNS cache",
         "If you're using a VPN, try disconnecting it",
       ],
-      undefined
-    );
+      undefined,
+    )
   }
 
   // Generic network error
@@ -392,16 +402,19 @@ export function parseNetworkError(error: Error): UserError {
       "Try again in a few minutes",
       "If the problem persists, check your network settings",
     ],
-    undefined
-  );
+    undefined,
+  )
 }
 
 /**
  * Parse file system errors
  */
-export function parseFileSystemError(error: Error, filePath?: string): UserError {
-  const code = (error as any).code;
-  const message = error.message;
+export function parseFileSystemError(
+  error: Error,
+  filePath?: string,
+): UserError {
+  const code = (error as any).code
+  const message = error.message
 
   // Permission denied
   if (code === "EACCES" || code === "EPERM") {
@@ -413,8 +426,8 @@ export function parseFileSystemError(error: Error, filePath?: string): UserError
         "Check file/directory permissions",
         "Ensure the user has read/write access to the data directory",
       ],
-      undefined
-    );
+      undefined,
+    )
   }
 
   // No space left
@@ -427,8 +440,8 @@ export function parseFileSystemError(error: Error, filePath?: string): UserError
         "Free up disk space by deleting unnecessary files",
         "Consider moving the BillClaw data directory to a drive with more space",
       ],
-      undefined
-    );
+      undefined,
+    )
   }
 
   // Directory not found
@@ -441,8 +454,8 @@ export function parseFileSystemError(error: Error, filePath?: string): UserError
         "Run setup to initialize BillClaw",
         "Verify the data directory path is correct",
       ],
-      undefined
-    );
+      undefined,
+    )
   }
 
   // Generic file system error
@@ -455,8 +468,8 @@ export function parseFileSystemError(error: Error, filePath?: string): UserError
       "Ensure the data directory exists and is writable",
       "Try running setup to reinitialize",
     ],
-    undefined
-  );
+    undefined,
+  )
 }
 
 /**
@@ -468,7 +481,7 @@ export function isUserError(error: unknown): error is UserError {
     error !== null &&
     "type" in error &&
     (error as UserError).type === "UserError"
-  );
+  )
 }
 
 /**
@@ -477,31 +490,32 @@ export function isUserError(error: unknown): error is UserError {
 export function logError(
   logger: Logger | undefined,
   error: UserError | Error,
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>,
 ): void {
   const logData = {
     timestamp: new Date().toISOString(),
     category: isUserError(error) ? error.category : ErrorCategory.UNKNOWN,
     message: error.message,
     context,
-  } as Record<string, unknown>;
+  } as Record<string, unknown>
 
   if (isUserError(error) && error.error) {
     logData.originalError = {
       name: error.error.name,
       message: error.error.message,
       stack: error.error.stack,
-    };
+    }
   }
 
-  logger?.error?.("BillClaw error:", JSON.stringify(logData, null, 2));
+  logger?.error?.("BillClaw error:", JSON.stringify(logData, null, 2))
 }
 
 /**
  * Get troubleshooting guide URL for error category
  */
 export function getTroubleshootingUrl(category: ErrorCategory): string {
-  const baseUrl = "https://github.com/fire-zu/billclaw/blob/main/docs/troubleshooting.md";
+  const baseUrl =
+    "https://github.com/fire-zu/billclaw/blob/main/docs/troubleshooting.md"
   const urls: Partial<Record<ErrorCategory, string>> = {
     [ErrorCategory.CONFIG]: `${baseUrl}#configuration-issues`,
     [ErrorCategory.CREDENTIALS]: `${baseUrl}#credentials--authentication`,
@@ -513,7 +527,7 @@ export function getTroubleshootingUrl(category: ErrorCategory): string {
     [ErrorCategory.GMAIL_AUTH]: `${baseUrl}#credentials--authentication`,
     [ErrorCategory.STORAGE]: `${baseUrl}#storage-issues`,
     [ErrorCategory.FILE_SYSTEM]: `${baseUrl}#storage-issues`,
-  };
+  }
 
-  return urls[category] || baseUrl;
+  return urls[category] || baseUrl
 }

@@ -4,4 +4,4 @@
  * @packageDocumentation
  */
 
-export * from './sync-service.js';
+export * from "./sync-service.js"

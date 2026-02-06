@@ -4,5 +4,5 @@
  * @packageDocumentation
  */
 
-export * from './plaid/index.js';
-export * from './gmail/index.js';
+export * from "./plaid/index.js"
+export * from "./gmail/index.js"

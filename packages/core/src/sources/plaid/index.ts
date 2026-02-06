@@ -4,4 +4,4 @@
  * @packageDocumentation
  */
 
-export * from './plaid-sync.js';
+export * from "./plaid-sync.js"

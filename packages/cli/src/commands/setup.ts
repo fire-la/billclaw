@@ -4,57 +4,57 @@
  * Interactive setup wizard for connecting accounts.
  */
 
-import type { CliCommand, CliContext } from "./registry.js";
-import inquirer from "inquirer";
-import { success, error } from "../utils/format.js";
+import type { CliCommand, CliContext } from "./registry.js"
+import inquirer from "inquirer"
+import { success, error } from "../utils/format.js"
 import {
   readAccountRegistry,
   writeAccountRegistry,
   getStorageDir,
-} from "@fire-zu/billclaw-core";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
+} from "@fire-zu/billclaw-core"
+import * as fs from "node:fs/promises"
+import * as path from "node:path"
 
 /**
  * Account type prompt answers
  */
 interface AccountTypeAnswers {
-  accountType: "plaid" | "gmail" | "gocardless";
+  accountType: "plaid" | "gmail" | "gocardless"
 }
 
 /**
  * Plaid setup answers
  */
 interface PlaidAnswers {
-  clientId: string;
-  secret: string;
-  environment: "sandbox" | "development" | "production";
+  clientId: string
+  secret: string
+  environment: "sandbox" | "development" | "production"
 }
 
 /**
  * Gmail setup answers
  */
 interface GmailAnswers {
-  credentialsPath: string;
-  clientId?: string;
-  clientSecret?: string;
+  credentialsPath: string
+  clientId?: string
+  clientSecret?: string
 }
 
 /**
  * GoCardless setup answers
  */
 interface GoCardlessAnswers {
-  clientId: string;
-  secret: string;
-  environment: "sandbox" | "live";
+  clientId: string
+  secret: string
+  environment: "sandbox" | "live"
 }
 
 /**
  * Run setup wizard
  */
 async function runSetup(context: CliContext): Promise<void> {
-  console.log("BillClaw Account Setup");
-  console.log("");
+  console.log("BillClaw Account Setup")
+  console.log("")
 
   const { accountType } = await inquirer.prompt<AccountTypeAnswers>([
     {
@@ -64,28 +64,31 @@ async function runSetup(context: CliContext): Promise<void> {
       choices: [
         { name: "Plaid (Bank accounts via Plaid Link)", value: "plaid" },
         { name: "Gmail (Email bills)", value: "gmail" },
-        { name: "GoCardless (Bank accounts via open banking)", value: "gocardless" },
+        {
+          name: "GoCardless (Bank accounts via open banking)",
+          value: "gocardless",
+        },
       ],
     },
-  ]);
+  ])
 
   try {
     switch (accountType) {
       case "plaid":
-        await setupPlaid(context);
-        break;
+        await setupPlaid(context)
+        break
       case "gmail":
-        await setupGmail(context);
-        break;
+        await setupGmail(context)
+        break
       case "gocardless":
-        await setupGoCardless(context);
-        break;
+        await setupGoCardless(context)
+        break
     }
 
-    success("Account added successfully!");
+    success("Account added successfully!")
   } catch (err) {
-    error("Failed to add account: " + (err as Error).message);
-    throw err;
+    error("Failed to add account: " + (err as Error).message)
+    throw err
   }
 }
 
@@ -118,15 +121,15 @@ async function setupPlaid(context: CliContext): Promise<void> {
       ],
       default: "sandbox",
     },
-  ]);
+  ])
 
-  const accountId = `plaid-${Date.now()}`;
+  const accountId = `plaid-${Date.now()}`
 
   // Get storage configuration
-  const storageConfig = await context.runtime.config.getStorageConfig();
+  const storageConfig = await context.runtime.config.getStorageConfig()
 
   // Read current account registry
-  const accounts = await readAccountRegistry(storageConfig);
+  const accounts = await readAccountRegistry(storageConfig)
 
   // Add new account to registry
   accounts.push({
@@ -134,15 +137,15 @@ async function setupPlaid(context: CliContext): Promise<void> {
     type: "plaid",
     name: `Plaid Account ${accounts.length + 1}`,
     createdAt: new Date().toISOString(),
-  });
-  await writeAccountRegistry(accounts, storageConfig);
+  })
+  await writeAccountRegistry(accounts, storageConfig)
 
   // Store credentials to file
   const accountPath = path.join(
     await getStorageDir(storageConfig),
-    `accounts/${accountId}.json`
-  );
-  await fs.mkdir(path.dirname(accountPath), { recursive: true });
+    `accounts/${accountId}.json`,
+  )
+  await fs.mkdir(path.dirname(accountPath), { recursive: true })
   await fs.writeFile(
     accountPath,
     JSON.stringify(
@@ -153,11 +156,11 @@ async function setupPlaid(context: CliContext): Promise<void> {
         environment: answers.environment,
       },
       null,
-      2
-    )
-  );
+      2,
+    ),
+  )
 
-  context.runtime.logger.info("Plaid account configured:", accountId);
+  context.runtime.logger.info("Plaid account configured:", accountId)
 }
 
 /**
@@ -182,15 +185,15 @@ async function setupGmail(context: CliContext): Promise<void> {
       message: "Gmail OAuth Client Secret (optional):",
       mask: "*",
     },
-  ]);
+  ])
 
-  const accountId = `gmail-${Date.now()}`;
+  const accountId = `gmail-${Date.now()}`
 
   // Get storage configuration
-  const storageConfig = await context.runtime.config.getStorageConfig();
+  const storageConfig = await context.runtime.config.getStorageConfig()
 
   // Read current account registry
-  const accounts = await readAccountRegistry(storageConfig);
+  const accounts = await readAccountRegistry(storageConfig)
 
   // Add new account to registry
   accounts.push({
@@ -198,15 +201,15 @@ async function setupGmail(context: CliContext): Promise<void> {
     type: "gmail",
     name: `Gmail Account ${accounts.length + 1}`,
     createdAt: new Date().toISOString(),
-  });
-  await writeAccountRegistry(accounts, storageConfig);
+  })
+  await writeAccountRegistry(accounts, storageConfig)
 
   // Store credentials to file
   const accountPath = path.join(
     await getStorageDir(storageConfig),
-    `accounts/${accountId}.json`
-  );
-  await fs.mkdir(path.dirname(accountPath), { recursive: true });
+    `accounts/${accountId}.json`,
+  )
+  await fs.mkdir(path.dirname(accountPath), { recursive: true })
   await fs.writeFile(
     accountPath,
     JSON.stringify(
@@ -217,11 +220,11 @@ async function setupGmail(context: CliContext): Promise<void> {
         clientSecret: answers.clientSecret || null,
       },
       null,
-      2
-    )
-  );
+      2,
+    ),
+  )
 
-  context.runtime.logger.info("Gmail account configured:", accountId);
+  context.runtime.logger.info("Gmail account configured:", accountId)
 }
 
 /**
@@ -252,15 +255,15 @@ async function setupGoCardless(context: CliContext): Promise<void> {
       ],
       default: "sandbox",
     },
-  ]);
+  ])
 
-  const accountId = `gocardless-${Date.now()}`;
+  const accountId = `gocardless-${Date.now()}`
 
   // Get storage configuration
-  const storageConfig = await context.runtime.config.getStorageConfig();
+  const storageConfig = await context.runtime.config.getStorageConfig()
 
   // Read current account registry
-  const accounts = await readAccountRegistry(storageConfig);
+  const accounts = await readAccountRegistry(storageConfig)
 
   // Add new account to registry
   accounts.push({
@@ -268,15 +271,15 @@ async function setupGoCardless(context: CliContext): Promise<void> {
     type: "gocardless",
     name: `GoCardless Account ${accounts.length + 1}`,
     createdAt: new Date().toISOString(),
-  });
-  await writeAccountRegistry(accounts, storageConfig);
+  })
+  await writeAccountRegistry(accounts, storageConfig)
 
   // Store credentials to file
   const accountPath = path.join(
     await getStorageDir(storageConfig),
-    `accounts/${accountId}.json`
-  );
-  await fs.mkdir(path.dirname(accountPath), { recursive: true });
+    `accounts/${accountId}.json`,
+  )
+  await fs.mkdir(path.dirname(accountPath), { recursive: true })
   await fs.writeFile(
     accountPath,
     JSON.stringify(
@@ -287,11 +290,11 @@ async function setupGoCardless(context: CliContext): Promise<void> {
         environment: answers.environment,
       },
       null,
-      2
-    )
-  );
+      2,
+    ),
+  )
 
-  context.runtime.logger.info("GoCardless account configured:", accountId);
+  context.runtime.logger.info("GoCardless account configured:", accountId)
 }
 
 /**
@@ -302,4 +305,4 @@ export const setupCommand: CliCommand = {
   description: "Interactive setup wizard for connecting accounts",
   aliases: ["init"],
   handler: runSetup,
-};
+}

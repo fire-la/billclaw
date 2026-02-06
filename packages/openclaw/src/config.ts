@@ -5,7 +5,7 @@
  * the OpenClaw config interface.
  */
 
-import { Type } from "@sinclair/typebox";
+import { Type } from "@sinclair/typebox"
 
 /**
  * BillClaw configuration schema for OpenClaw
@@ -17,17 +17,29 @@ export const billclawConfigSchema = Type.Object({
       Type.Object({
         id: Type.String(),
         name: Type.String(),
-        type: Type.Union([Type.Literal("plaid"), Type.Literal("gocardless"), Type.Literal("gmail")]),
+        type: Type.Union([
+          Type.Literal("plaid"),
+          Type.Literal("gocardless"),
+          Type.Literal("gmail"),
+        ]),
         enabled: Type.Boolean(),
-        syncFrequency: Type.Optional(Type.Union([
-          Type.Literal("realtime"),
-          Type.Literal("hourly"),
-          Type.Literal("daily"),
-          Type.Literal("weekly"),
-          Type.Literal("manual"),
-        ])),
+        syncFrequency: Type.Optional(
+          Type.Union([
+            Type.Literal("realtime"),
+            Type.Literal("hourly"),
+            Type.Literal("daily"),
+            Type.Literal("weekly"),
+            Type.Literal("manual"),
+          ]),
+        ),
         lastSync: Type.Optional(Type.String()),
-        lastStatus: Type.Optional(Type.Union([Type.Literal("success"), Type.Literal("error"), Type.Literal("pending")])),
+        lastStatus: Type.Optional(
+          Type.Union([
+            Type.Literal("success"),
+            Type.Literal("error"),
+            Type.Literal("pending"),
+          ]),
+        ),
         // Plaid-specific
         plaidItemId: Type.Optional(Type.String()),
         plaidAccessToken: Type.Optional(Type.String()),
@@ -38,22 +50,30 @@ export const billclawConfigSchema = Type.Object({
         gmailEmailAddress: Type.Optional(Type.String()),
         gmailFilters: Type.Optional(Type.Array(Type.String())),
       }),
-      { additionalProperties: false }
-    )
+      { additionalProperties: false },
+    ),
   ),
   plaid: Type.Optional(
     Type.Object({
       clientId: Type.Optional(Type.String()),
       secret: Type.Optional(Type.String()),
-      environment: Type.Optional(Type.Union([Type.Literal("sandbox"), Type.Literal("development"), Type.Literal("production")])),
+      environment: Type.Optional(
+        Type.Union([
+          Type.Literal("sandbox"),
+          Type.Literal("development"),
+          Type.Literal("production"),
+        ]),
+      ),
       webhookUrl: Type.Optional(Type.String()),
-    })
+    }),
   ),
   gocardless: Type.Optional(
     Type.Object({
       accessToken: Type.Optional(Type.String()),
-      environment: Type.Optional(Type.Union([Type.Literal("sandbox"), Type.Literal("live")])),
-    })
+      environment: Type.Optional(
+        Type.Union([Type.Literal("sandbox"), Type.Literal("live")]),
+      ),
+    }),
   ),
   gmail: Type.Optional(
     Type.Object({
@@ -66,20 +86,28 @@ export const billclawConfigSchema = Type.Object({
       confidenceThreshold: Type.Optional(Type.Number()),
       requireAmount: Type.Optional(Type.Boolean()),
       requireDate: Type.Optional(Type.Boolean()),
-      billTypePatterns: Type.Optional(Type.Record(Type.String(), Type.Array(Type.String()))),
-    })
+      billTypePatterns: Type.Optional(
+        Type.Record(Type.String(), Type.Array(Type.String())),
+      ),
+    }),
   ),
   storage: Type.Optional(
     Type.Object({
       path: Type.String(),
-      format: Type.Optional(Type.Union([Type.Literal("json"), Type.Literal("csv"), Type.Literal("both")])),
+      format: Type.Optional(
+        Type.Union([
+          Type.Literal("json"),
+          Type.Literal("csv"),
+          Type.Literal("both"),
+        ]),
+      ),
       encryption: Type.Optional(
         Type.Object({
           enabled: Type.Boolean(),
           keyPath: Type.Optional(Type.String()),
-        })
+        }),
       ),
-    })
+    }),
   ),
   sync: Type.Optional(
     Type.Object({
@@ -90,11 +118,11 @@ export const billclawConfigSchema = Type.Object({
           Type.Literal("daily"),
           Type.Literal("weekly"),
           Type.Literal("manual"),
-        ])
+        ]),
       ),
       retryOnFailure: Type.Optional(Type.Boolean()),
       maxRetries: Type.Optional(Type.Number()),
-    })
+    }),
   ),
   webhooks: Type.Optional(
     Type.Array(
@@ -107,7 +135,7 @@ export const billclawConfigSchema = Type.Object({
             maxRetries: Type.Optional(Type.Number()),
             initialDelay: Type.Optional(Type.Number()),
             maxDelay: Type.Optional(Type.Number()),
-          })
+          }),
         ),
         events: Type.Optional(
           Type.Array(
@@ -122,13 +150,13 @@ export const billclawConfigSchema = Type.Object({
               Type.Literal("account.disconnected"),
               Type.Literal("account.error"),
               Type.Literal("webhook.test"),
-            ])
-          )
+            ]),
+          ),
         ),
-      })
-    )
+      }),
+    ),
   ),
-});
+})
 
 /**
  * UI hints for OpenClaw config interface
@@ -220,4 +248,4 @@ export const billclawUiHints = {
     description: "HMAC secret for webhook signature verification",
     sensitive: true,
   },
-};
+}

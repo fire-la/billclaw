@@ -5,8 +5,8 @@
  * must implement to provide framework-specific functionality to the core.
  */
 
-import type { Logger } from "../errors/errors.js";
-import type { BillclawConfig, StorageConfig } from "../models/config.js";
+import type { Logger } from "../errors/errors.js"
+import type { BillclawConfig, StorageConfig } from "../models/config.js"
 
 /**
  * Configuration provider - loads and provides configuration
@@ -15,22 +15,22 @@ export interface ConfigProvider {
   /**
    * Get the full BillClaw configuration
    */
-  getConfig(): Promise<BillclawConfig>;
+  getConfig(): Promise<BillclawConfig>
 
   /**
    * Get the storage configuration
    */
-  getStorageConfig(): Promise<StorageConfig>;
+  getStorageConfig(): Promise<StorageConfig>
 
   /**
    * Update a specific account configuration
    */
-  updateAccount(accountId: string, updates: Partial<any>): Promise<void>;
+  updateAccount(accountId: string, updates: Partial<any>): Promise<void>
 
   /**
    * Get account configuration by ID
    */
-  getAccount(accountId: string): Promise<any | null>;
+  getAccount(accountId: string): Promise<any | null>
 }
 
 /**
@@ -40,17 +40,17 @@ export interface EventEmitter {
   /**
    * Emit an event
    */
-  emit(event: string, data?: unknown): void;
+  emit(event: string, data?: unknown): void
 
   /**
    * Register an event listener
    */
-  on(event: string, handler: (data?: unknown) => void): void;
+  on(event: string, handler: (data?: unknown) => void): void
 
   /**
    * Remove an event listener
    */
-  off(event: string, handler: (data?: unknown) => void): void;
+  off(event: string, handler: (data?: unknown) => void): void
 }
 
 /**
@@ -60,17 +60,17 @@ export interface RuntimeContext {
   /**
    * Logger for output
    */
-  logger: Logger;
+  logger: Logger
 
   /**
    * Configuration provider
    */
-  config: ConfigProvider;
+  config: ConfigProvider
 
   /**
    * Event emitter
    */
-  events?: EventEmitter;
+  events?: EventEmitter
 
   /**
    * Platform-specific utilities
@@ -79,18 +79,18 @@ export interface RuntimeContext {
     /**
      * Get the home directory
      */
-    getHomeDir(): string;
+    getHomeDir(): string
 
     /**
      * Get the data directory
      */
-    getDataDir(): string;
+    getDataDir(): string
 
     /**
      * Open a URL in the browser
      */
-    openUrl(url: string): Promise<void>;
-  };
+    openUrl(url: string): Promise<void>
+  }
 }
 
 /**
@@ -98,20 +98,20 @@ export interface RuntimeContext {
  */
 export class ConsoleLogger implements Logger {
   info(...args: unknown[]): void {
-    console.log("[INFO]", ...args);
+    console.log("[INFO]", ...args)
   }
 
   error(...args: unknown[]): void {
-    console.error("[ERROR]", ...args);
+    console.error("[ERROR]", ...args)
   }
 
   warn(...args: unknown[]): void {
-    console.warn("[WARN]", ...args);
+    console.warn("[WARN]", ...args)
   }
 
   debug(...args: unknown[]): void {
     if (process.env.DEBUG) {
-      console.debug("[DEBUG]", ...args);
+      console.debug("[DEBUG]", ...args)
     }
   }
 }
@@ -120,16 +120,16 @@ export class ConsoleLogger implements Logger {
  * In-memory event emitter implementation
  */
 export class MemoryEventEmitter implements EventEmitter {
-  private listeners = new Map<string, Set<(data?: unknown) => void>>();
+  private listeners = new Map<string, Set<(data?: unknown) => void>>()
 
   emit(event: string, data?: unknown): void {
-    const handlers = this.listeners.get(event);
+    const handlers = this.listeners.get(event)
     if (handlers) {
       for (const handler of handlers) {
         try {
-          handler(data);
+          handler(data)
         } catch (error) {
-          console.error(`Error in event handler for ${event}:`, error);
+          console.error(`Error in event handler for ${event}:`, error)
         }
       }
     }
@@ -137,15 +137,15 @@ export class MemoryEventEmitter implements EventEmitter {
 
   on(event: string, handler: (data?: unknown) => void): void {
     if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set());
+      this.listeners.set(event, new Set())
     }
-    this.listeners.get(event)!.add(handler);
+    this.listeners.get(event)!.add(handler)
   }
 
   off(event: string, handler: (data?: unknown) => void): void {
-    const handlers = this.listeners.get(event);
+    const handlers = this.listeners.get(event)
     if (handlers) {
-      handlers.delete(handler);
+      handlers.delete(handler)
     }
   }
 }
@@ -157,25 +157,27 @@ export class MemoryConfigProvider implements ConfigProvider {
   constructor(private config: BillclawConfig) {}
 
   async getConfig(): Promise<BillclawConfig> {
-    return this.config;
+    return this.config
   }
 
   async getStorageConfig(): Promise<StorageConfig> {
-    return this.config.storage || {
-      path: "~/.billclaw",
-      format: "json",
-      encryption: { enabled: false },
-    };
+    return (
+      this.config.storage || {
+        path: "~/.billclaw",
+        format: "json",
+        encryption: { enabled: false },
+      }
+    )
   }
 
   async updateAccount(accountId: string, updates: Partial<any>): Promise<void> {
-    const account = this.config.accounts.find((a) => a.id === accountId);
+    const account = this.config.accounts.find((a) => a.id === accountId)
     if (account) {
-      Object.assign(account, updates);
+      Object.assign(account, updates)
     }
   }
 
   async getAccount(accountId: string): Promise<any | null> {
-    return this.config.accounts.find((a) => a.id === accountId) || null;
+    return this.config.accounts.find((a) => a.id === accountId) || null
   }
 }

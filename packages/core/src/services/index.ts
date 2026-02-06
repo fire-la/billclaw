@@ -5,4 +5,4 @@
  * including event emission, signature generation, and retry logic.
  */
 
-export * from "./event-emitter.js";
+export * from "./event-emitter.js"
