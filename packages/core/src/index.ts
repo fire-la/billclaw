@@ -1,0 +1,71 @@
+/**
+ * BillClaw Core - Framework-agnostic business logic for financial data import
+ *
+ * This package contains all core functionality with zero dependencies on any
+ * AI framework (OpenClaw, OpenHands, etc.).
+ *
+ * @packageDocumentation
+ */
+
+// Main class
+export { Billclaw } from './billclaw.js';
+
+// Models and schemas
+export * from './models/index.js';
+
+// Storage
+export * from './storage/index.js';
+
+// Sync
+export * from './sync/index.js';
+
+// Data sources (note: some types may overlap with parsers)
+export {
+  syncPlaidAccounts,
+  syncPlaidAccount,
+  createPlaidClient,
+  convertTransaction,
+  type PlaidConfig,
+  type PlaidAccount,
+  type PlaidSyncResult,
+} from './sources/plaid/plaid-sync.js';
+export {
+  fetchGmailBills,
+  fetchBillEmails,
+  recognizeBill,
+  parseBillToTransaction,
+  type GmailConfig,
+  type GmailAccount,
+  type GmailFetchResult,
+  type EmailContent,
+  type BillRecognition,
+} from './sources/gmail/gmail-fetch.js';
+
+// Exporters
+export {
+  exportToBeancount,
+  exportStorageToBeancount,
+  transactionToBeancount,
+  getBeancountAccountMappings,
+  type BeancountExportOptions,
+} from './exporters/beancount.js';
+export {
+  exportToLedger,
+  exportStorageToLedger,
+  transactionToLedger,
+  getLedgerAccountMappings,
+  type LedgerExportOptions,
+} from './exporters/ledger.js';
+
+// Errors
+export * from './errors/index.js';
+
+// Credentials & Security
+export * from './credentials/index.js';
+export * from './security/index.js';
+
+// Runtime abstractions
+export * from './runtime/index.js';
+
+// Version
+export const VERSION = '0.0.1' as const;

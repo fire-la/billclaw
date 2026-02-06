@@ -1,0 +1,74 @@
+{
+  "name": "@fire-zu/billclaw-openclaw",
+  "version": "0.0.1",
+  "description": "BillClaw OpenClaw Plugin - Adapter for OpenClaw AI framework",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "financial-data",
+    "plaid",
+    "gocardless",
+    "banking",
+    "transactions",
+    "bills"
+  ],
+  "author": "fire-zu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fire-zu/billclaw.git",
+    "directory": "packages/openclaw"
+  },
+  "devDependencies": {
+    "@sinclair/typebox": "^0.34.48",
+    "@types/node": "^25.2.0",
+    "openclaw": "^0.0.1",
+    "oxfmt": "^0.1.0",
+    "oxlint": "^0.15.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@fire-zu/billclaw-core": "workspace:*",
+    "plaid": "^32.0.0",
+    "zod": "^3.25.0"
+  },
+  "peerDependencies": {
+    "openclaw": "^0.0.1"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

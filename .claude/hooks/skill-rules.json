@@ -1,0 +1,74 @@
+{
+  "skills": [
+    {
+      "name": "git-guidelines",
+      "description": "Git commit message format, issue creation rules, and repository language standards",
+      "auto_invoke": true,
+      "skill_path": "git-guidelines/SKILL.md",
+      "keywords": [
+        "git",
+        "commit",
+        "提交",
+        "issue",
+        "push",
+        "pull",
+        "拉取",
+        "conventional commits",
+        "--no-verify"
+      ],
+      "intent_patterns": [
+        "(git|提交).*(commit|message|信息)",
+        "(create|创建).*(issue|问题)",
+        "(commit|提交).*(format|格式|规范)",
+        "(push|推送).*(code|代码)",
+        "(pull|拉取|fetch|获取).*(latest|最新|remote|远程)",
+        "请.*(拉取|pull|fetch|获取)",
+        "请.*(同步|sync).*(remote|远程)",
+        "(hook|钩子).*(fail|失败|bypass|绕过)",
+        "请.*(提交|commit|push|推送)",
+        "(提交|commit).*(并|and|then).*(推送|push)",
+        "(do|run|执行|请).*(commit|提交)"
+      ],
+      "priority": "high"
+    },
+    {
+      "name": "openclaw-plugin",
+      "description": "OpenClaw Plugin Development Skill - Complete guide for developing plugins following official SDK conventions. Automatically invoked when: starting plugin development, executing /plan, using planning-with-files skill, or before implementing code for OpenClaw extensions.",
+      "auto_invoke": true,
+      "skill_path": "openclaw-plugin/SKILL.md",
+      "keywords": [
+        "openclaw",
+        "plugin",
+        "插件",
+        "plugin-sdk",
+        "openclaw extension",
+        "plugin development",
+        "插件开发",
+        "register api",
+        "config schema",
+        "tool registration"
+      ],
+      "intent_patterns": [
+        "(openclaw).*(plugin|extension|插件)",
+        "(develop|developing|开发).*(openclaw).*(plugin|插件)",
+        "(create|build|make|创建).*(openclaw).*(plugin|插件)",
+        "(plugin|插件).*(register|registration|注册)",
+        "openclaw.*(config|schema|配置)",
+        "(tool|cli|service).*(registration|注册)",
+        "(plugin|插件).*(align|alignment|对齐)",
+        "(implement|实现).*(plugin|插件).*(structure|结构)",
+        "(refactor|重构).*(plugin|插件)",
+        "(plugin|插件).*(sdk|convention|规范|standard)",
+        "(start|begin|开始).*(implement|实现|code|代码).*(plugin|插件)",
+        "(before|在.*之前).*(implement|实现|code|代码)",
+        "/plan",
+        "plan.*with.*files",
+        "planning.*with.*files",
+        "(执行|execute|run).*(plan|计划)",
+        "(进入|enter).*(plan|计划).*(mode|模式)",
+        "(create|创建).*(plan|计划).*(with.*files|文件)"
+      ],
+      "priority": "critical"
+    }
+  ]
+}

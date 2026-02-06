@@ -1,104 +1,175 @@
-# billclaw
+# BillClaw
 
-> **Your Financial Data, Your Control** - Bank transaction and bill data import for OpenClaw
+Financial data sovereignty with multi-platform plugin architecture.
 
-## Data Sovereignty for Your Financial Data
+## Overview
 
-**Problem**: When you use apps that integrate with Plaid and other data aggregators, the access tokens are stored on the app's servers. This means you lose **data sovereignty** - your financial data is controlled by third parties.
+BillClaw is an open-source financial data import system that puts you in control of your financial data. Instead of storing your banking credentials with third-party services, BillClaw stores them locally and syncs transactions directly to your own storage.
 
-**Solution**: billclaw lets you hold your own Plaid/bank access tokens locally, through OpenClaw. Your data, your control.
+### Key Features
 
-### Traditional Model vs. OpenClaw Model
+- **Data Sovereignty**: Your credentials stay on your machine
+- **Multi-Source**: Import from Plaid, Gmail, and GoCardless
+- **Flexible Export**: Export to Beancount, Ledger, or CSV
+- **Framework Agnostic**: Use with OpenClaw, as a CLI, or as a library
+- **Local Storage**: All data stored locally with optional encryption
+- **Real-time Sync**: Webhook support for instant transaction updates
+
+## Architecture
+
+BillClaw uses a **Plugin + Skill hybrid architecture**:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ Traditional: Data sovereignty with App providers        │
-├─────────────────────────────────────────────────────────┤
-│   User → [App Server] → Plaid/Bank APIs                 │
-│           △                                             │
-│      Access Token stored here                           │
-│                                                         │
-│ ❌ App can view all your transaction data               │
-│ ❌ Switching apps requires re-authorizing all banks     │
-│ ❌ Apps may leak or monetize your data                  │
-│ ❌ Vendor lock-in                                       │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│ OpenClaw Model: Data sovereignty returns to you         │
-├─────────────────────────────────────────────────────────┤
-│   User → [Local OpenClaw] → Plaid/Bank APIs             │
-│           △                                             │
-│      Access Token stored locally on your device         │
-│                                                         │
-│ ✅ Data never leaves your device                        │
-│ ✅ Switch frontend apps without re-authorizing          │
-│ ✅ Zero-knowledge architecture                          │
-│ ✅ Complete user control                                │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      BillClaw Monorepo                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────────┐  ┌──────────────────┐               │
+│  │  OpenClaw Plugin │  │   Standalone CLI │               │
+│  │  (AI Framework)  │  │   (Terminal)     │               │
+│  └────────┬─────────┘  └────────┬─────────┘               │
+│           │                      │                          │
+│           └──────────┬───────────┘                          │
+│                      ▼                                      │
+│           ┌────────────────────┐                           │
+│           │  @fire-zu/billclaw-core  │                     │
+│           │  (Framework-Agnostic) │                         │
+│           └────────────────────┘                           │
+│                      │                                      │
+│           ┌──────────┴──────────┐                          │
+│           ▼                     ▼                          │
+│    ┌──────────┐          ┌────────────┐                   │
+│    │  Plaid   │          │   Gmail    │                   │
+│    │   API    │          │   Parser   │                   │
+│    └──────────┘          └────────────┘                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Features
+## Packages
 
-- **Plaid Integration**: Connect to 12,000+ financial institutions in US/Canada
-- **GoCardless Integration**: Access 2,300+ European banks via PSD2
-- **Gmail Bill Fetching**: Automatically extract bills from email
-- **Local Storage**: JSON files stored locally, under your control
-- **Real-time Sync**: Webhook support for instant updates
-- **Multi-Account**: Manage multiple bank accounts independently
-- **Idempotent**: Safe to re-run - no duplicate data
+### [@fire-zu/billclaw-core](./packages/core)
 
-## Status
+Framework-agnostic core business logic. This package contains all the functionality with zero dependencies on any AI framework.
 
-🚧 **Under Active Development** - Phase 0: Architecture Design Complete
+- Data models with Zod validation
+- Transaction storage with caching and indexing
+- Plaid and Gmail integration
+- Beancount and Ledger exporters
+- Security: keychain integration and audit logging
 
-This project is currently in early development. Check out the [project board](https://github.com/fire-zu/billclaw/projects) for progress.
+### [@fire-zu/billclaw-openclaw](./packages/openclaw)
 
-## Installation
+OpenClaw plugin adapter. Integrates BillClaw with the OpenClaw AI framework.
+
+- 6 agent tools (plaid_sync, gmail_fetch, bill_parse, etc.)
+- 4 CLI commands (bills setup, sync, status, config)
+- 2 OAuth providers (Plaid, Gmail)
+- 2 background services (sync, webhook)
+
+### [@fire-zu/billclaw-cli](./packages/cli)
+
+Standalone command-line interface. Use BillClaw without any AI framework.
+
+- Interactive setup wizard
+- Transaction sync and status monitoring
+- Configuration management
+- Export to Beancount/Ledger
+- Import from CSV/OFX/QFX
+
+## Quick Start
+
+### As OpenClaw Plugin
 
 ```bash
-# Coming soon
-openclaw plugins install @fire-zu/billclaw
+cd ~/.openclaw/extensions
+npm install @fire-zu/billclaw-openclaw
 ```
 
-## Usage
+### As Standalone CLI
 
 ```bash
-# Setup wizard
-openclaw bills setup
-
-# Manual sync
-openclaw bills sync
-
-# Check status
-openclaw bills status
+npm install -g @fire-zu/billclaw-cli
+billclaw setup
+billclaw sync
 ```
 
-## Project Structure
+### As a Library
+
+```bash
+npm install @fire-zu/billclaw-core
+```
+
+```typescript
+import { Billclaw } from "@fire-zu/billclaw-core";
+
+const billclaw = new Billclaw(runtime);
+await billclaw.syncPlaid();
+const transactions = await billclaw.getTransactions("all", 2024, 1);
+```
+
+## Development
+
+### Prerequisites
+
+- Node.js >= 20.0.0
+- pnpm >= 9.0.0
+
+### Setup
+
+```bash
+# Clone repository
+git clone https://github.com/fire-zu/billclaw.git
+cd billclaw
+
+# Install dependencies
+pnpm install
+
+# Build all packages
+pnpm build
+```
+
+### Scripts
+
+```bash
+pnpm build           # Build all packages
+pnpm test            # Run all tests
+pnpm lint            # Lint all packages
+pnpm format          # Format all code
+pnpm clean           # Clean build artifacts
+```
+
+### Project Structure
 
 ```
-extensions/billclaw/          # Plugin (core functionality)
-├── openclaw.plugin.json
-├── index.ts
-├── config.ts
-└── src/
-    ├── tools/               # Agent tools
-    ├── cli/                 # CLI commands
-    ├── oauth/               # OAuth flows
-    └── services/            # Background services
-
-skills/billclaw/              # Skill (user documentation)
-└── SKILL.md
+billclaw/
+├── packages/
+│   ├── core/          # Framework-agnostic core
+│   ├── openclaw/      # OpenClaw plugin adapter
+│   └── cli/           # Standalone CLI
+├── .github/
+│   └── workflows/     # CI/CD pipelines
+├── .husky/            # Pre-commit hooks
+├── pnpm-workspace.yaml
+└── package.json
 ```
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT - see [LICENSE](./LICENSE) file for details.
 
 ## Acknowledgments
 
-Built for the [OpenClaw](https://github.com/openclaw/openclaw) ecosystem.
+- [Plaid](https://plaid.com/) - Bank account API
+- [OpenClaw](https://openclaw.dev) - AI framework
+- [Beancount](https://beancount.github.io/) - Plain text accounting
+
+## Links
+
+- [GitHub](https://github.com/fire-zu/billclaw)
+- [npm](https://www.npmjs.com/org/fire-zu)
+- [Documentation](https://github.com/fire-zu/billclaw/wiki)

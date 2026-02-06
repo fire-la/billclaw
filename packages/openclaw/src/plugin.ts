@@ -1,0 +1,208 @@
+/**
+ * BillClaw OpenClaw Plugin
+ *
+ * OpenClaw adapter for BillClaw financial data import.
+ *
+ * @packageDocumentation
+ */
+
+import type { OpenClawPluginApi } from "./types/openclaw-sdk.js";
+import {
+  plaidSyncTool,
+  gmailFetchTool,
+  billParseTool,
+  conversationalSyncTool,
+  conversationalStatusTool,
+  conversationalHelpTool,
+} from "./tools/index.js";
+
+/**
+ * BillClaw OpenClaw plugin
+ */
+export default {
+  id: "billclaw",
+  name: "BillClaw",
+  description: "Financial data sovereignty with multi-platform plugin architecture",
+  kind: "integrations" as const,
+
+  register(api: OpenClawPluginApi) {
+    api.logger.info?.("billclaw: plugin registered");
+
+    // ========================================================================
+    // Tools
+    // ========================================================================
+
+    api.registerTool({
+      name: plaidSyncTool.name,
+      label: plaidSyncTool.label,
+      description: plaidSyncTool.description,
+      parameters: plaidSyncTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return plaidSyncTool.execute(api, params as never);
+      },
+    });
+
+    api.registerTool({
+      name: gmailFetchTool.name,
+      label: gmailFetchTool.label,
+      description: gmailFetchTool.description,
+      parameters: gmailFetchTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return gmailFetchTool.execute(api, params as never);
+      },
+    });
+
+    api.registerTool({
+      name: billParseTool.name,
+      label: billParseTool.label,
+      description: billParseTool.description,
+      parameters: billParseTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return billParseTool.execute(api, params as never);
+      },
+    });
+
+    api.registerTool({
+      name: conversationalSyncTool.name,
+      label: conversationalSyncTool.label,
+      description: conversationalSyncTool.description,
+      parameters: conversationalSyncTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return conversationalSyncTool.execute(api, params as never);
+      },
+    });
+
+    api.registerTool({
+      name: conversationalStatusTool.name,
+      label: conversationalStatusTool.label,
+      description: conversationalStatusTool.description,
+      parameters: conversationalStatusTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return conversationalStatusTool.execute(api, params as never);
+      },
+    });
+
+    api.registerTool({
+      name: conversationalHelpTool.name,
+      label: conversationalHelpTool.label,
+      description: conversationalHelpTool.description,
+      parameters: conversationalHelpTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return conversationalHelpTool.execute(api, params as never);
+      },
+    });
+
+    // ========================================================================
+    // CLI Commands
+    // ========================================================================
+
+    api.registerCli({
+      commands: ["bills", "bills:setup", "bills:sync", "bills:status", "bills:config"],
+      handler: ({ program }) => {
+        const bills = program
+          .command("bills")
+          .description("Manage financial data accounts and transaction imports");
+
+        bills
+          .command("setup")
+          .description("Interactive setup wizard for connecting accounts")
+          .action(async () => {
+            api.logger.info?.("Running setup wizard...");
+            // TODO: Implement setup wizard
+            return { message: "Setup wizard not yet implemented" };
+          });
+
+        bills
+          .command("sync")
+          .description("Manually trigger transaction sync")
+          .argument("[accountId]", "Specific account ID to sync")
+          .action(async (accountId = undefined) => {
+            api.logger.info?.(`Syncing${accountId ? ` account ${accountId}` : " all accounts"}...`);
+            const result = await plaidSyncTool.execute(api, { accountId });
+            api.logger.info?.("Sync complete:", result);
+            return result;
+          });
+
+        bills
+          .command("status")
+          .description("Show connection status and recent sync results")
+          .action(async () => {
+            const result = await conversationalStatusTool.execute(api, {});
+            api.logger.info?.("Status:", result);
+            return result;
+          });
+
+        bills
+          .command("config")
+          .description("Manage plugin configuration")
+          .argument("[key]", "Config key to view/set")
+          .argument("[value]", "Config value to set")
+          .action(async (key = undefined, value = undefined) => {
+            if (key && value) {
+              api.logger.info?.(`Setting config: ${key} = ${value}`);
+              return { message: `Config ${key} updated` };
+            } else if (key) {
+              const config = api.pluginConfig as Record<string, unknown>;
+              return { [key]: config[key] };
+            } else {
+              return api.pluginConfig;
+            }
+          });
+      },
+    });
+
+    // ========================================================================
+    // OAuth Providers
+    // ========================================================================
+
+    api.registerOAuth({
+      name: "plaid",
+      description: "Plaid Link OAuth flow for connecting bank accounts",
+      handler: async (_context) => {
+        api.logger.info?.("Plaid OAuth initiated");
+        // TODO: Implement Plaid Link OAuth flow
+        return {
+          url: "https://cdn.plaid.com/link/v2/stable/link.html",
+          token: "public-token-placeholder",
+        };
+      },
+    });
+
+    api.registerOAuth({
+      name: "gmail",
+      description: "Gmail OAuth 2.0 flow for accessing email bills",
+      handler: async (_context) => {
+        api.logger.info?.("Gmail OAuth initiated");
+        // TODO: Implement Gmail OAuth flow
+        return {
+          url: "https://accounts.google.com/o/oauth2/v2/auth",
+          token: "oauth-token-placeholder",
+        };
+      },
+    });
+
+    // ========================================================================
+    // Background Services
+    // ========================================================================
+
+    api.registerService({
+      id: "billclaw-sync",
+      start: async () => {
+        api.logger.info?.("billclaw: sync service started");
+      },
+      stop: async () => {
+        api.logger.info?.("billclaw: sync service stopped");
+      },
+    });
+
+    api.registerService({
+      id: "billclaw-webhook",
+      start: async () => {
+        api.logger.info?.("billclaw: webhook handler started");
+      },
+      stop: async () => {
+        api.logger.info?.("billclaw: webhook handler stopped");
+      },
+    });
+  },
+};

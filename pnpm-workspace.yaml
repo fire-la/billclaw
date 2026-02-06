@@ -1,0 +1,3 @@
+# BillClaw Monorepo Workspace Configuration
+packages:
+  - 'packages/*'

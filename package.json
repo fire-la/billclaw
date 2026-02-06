@@ -1,14 +1,47 @@
 {
-  "name": "billclaw",
+  "name": "billclaw-monorepo",
   "version": "0.0.1",
-  "description": "Bank transaction and bill data import for OpenClaw - Data sovereignty for your financial data",
+  "description": "BillClaw - Financial data sovereignty with multi-platform plugin architecture",
   "private": true,
+  "type": "module",
   "scripts": {
     "prepare": "husky .husky",
-    "lint": "cd extensions/billclaw && npm run lint",
-    "test": "cd extensions/billclaw && npm run lint"
+    "build": "pnpm -r --filter './packages/**' build",
+    "dev": "pnpm -r --filter './packages/**' --parallel dev",
+    "test": "pnpm -r --filter './packages/**' test",
+    "test:coverage": "pnpm -r --filter './packages/**' test:coverage",
+    "lint": "pnpm -r --filter './packages/**' lint",
+    "format": "pnpm -r --filter './packages/**' format",
+    "clean": "pnpm -r --filter './packages/**' clean",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "@changesets/cli": "^2.28.0",
+    "husky": "^9.1.7",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "plaid",
+    "gocardless",
+    "banking",
+    "finance",
+    "bills",
+    "transactions",
+    "data-sovereignty",
+    "monorepo"
+  ],
+  "author": "fire-zu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fire-zu/billclaw.git"
   }
 }

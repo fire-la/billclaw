@@ -1,0 +1,14 @@
+{
+  "name": "ign-hooks",
+  "version": "1.0.0",
+  "description": "Claude Code hooks for IGN Beancount SaaS project",
+  "type": "module",
+  "scripts": {
+    "test": "npx tsx skill-activation-prompt.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

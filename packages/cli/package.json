@@ -1,0 +1,70 @@
+{
+  "name": "@fire-zu/billclaw-cli",
+  "version": "0.0.1",
+  "description": "BillClaw CLI - Standalone command-line interface for financial data management",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "billclaw": "./bin/billclaw.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "billclaw",
+    "cli",
+    "financial-data",
+    "plaid",
+    "banking",
+    "transactions",
+    "beancount",
+    "ledger"
+  ],
+  "author": "fire-zu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fire-zu/billclaw.git",
+    "directory": "packages/cli"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "oxfmt": "^0.1.0",
+    "oxlint": "^0.15.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@fire-zu/billclaw-core": "workspace:*",
+    "chalk": "^5.4.0",
+    "commander": "^13.1.0",
+    "ora": "^8.1.0",
+    "cli-table3": "^0.6.5",
+    "inquirer": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
