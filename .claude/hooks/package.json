@@ -1,7 +1,7 @@
 {
-  "name": "ign-hooks",
+  "name": "billclaw-hooks",
   "version": "1.0.0",
-  "description": "Claude Code hooks for IGN Beancount SaaS project",
+  "description": "Claude Code hooks for BillClaw financial data sovereignty project",
   "type": "module",
   "scripts": {
     "test": "npx tsx skill-activation-prompt.ts"
