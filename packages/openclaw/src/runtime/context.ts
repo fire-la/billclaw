@@ -4,7 +4,7 @@
  * Adapts OpenClaw's plugin API to BillClaw's runtime abstractions.
  */
 
-import type { OpenClawPluginApi } from "../types/openclaw-sdk.js";
+import type { OpenClawPluginApi } from "../types/openclaw-plugin.js";
 import type {
   RuntimeContext,
   ConfigProvider,

@@ -6,7 +6,7 @@
  * @packageDocumentation
  */
 
-import type { OpenClawPluginApi } from "./types/openclaw-sdk.js";
+import type { OpenClawPluginApi } from "./types/openclaw-plugin.js";
 import {
   plaidSyncTool,
   gmailFetchTool,

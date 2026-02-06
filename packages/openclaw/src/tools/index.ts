@@ -5,7 +5,7 @@
  * OpenClaw's tool API.
  */
 
-import type { OpenClawPluginApi } from "../types/openclaw-sdk.js";
+import type { OpenClawPluginApi } from "../types/openclaw-plugin.js";
 import { Billclaw } from "@fire-zu/billclaw-core";
 import { OpenClawRuntimeContext } from "../runtime/context.js";
 

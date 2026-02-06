@@ -6,7 +6,7 @@
  * configured external webhook endpoints.
  */
 
-import type { OpenClawPluginApi } from "../types/openclaw-sdk.js";
+import type { OpenClawPluginApi } from "../types/openclaw-plugin.js";
 import { emitEvent, verifySignature } from "@fire-zu/billclaw-core";
 import type { WebhookEventType } from "@fire-zu/billclaw-core";
 

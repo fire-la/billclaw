@@ -9,7 +9,7 @@ import {
   OpenClawConfigProvider,
   OpenClawEventEmitter,
 } from "../context";
-import type { OpenClawPluginApi } from "../../types/openclaw-sdk";
+import type { OpenClawPluginApi } from "../../types/openclaw-plugin.js";
 
 // Mock OpenClaw API
 const createMockApi = (): OpenClawPluginApi => ({

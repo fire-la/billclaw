@@ -7,7 +7,7 @@
  * 2. Public token exchange (for completing the connection)
  */
 
-import type { OpenClawPluginApi } from "../types/openclaw-sdk.js";
+import type { OpenClawPluginApi } from "../types/openclaw-plugin.js";
 import { createPlaidClient, type PlaidConfig } from "@fire-zu/billclaw-core";
 import type {
   LinkTokenCreateRequest,

@@ -1,5 +1,5 @@
 /**
- * Type definitions for OpenClaw plugin SDK
+ * Type definitions for OpenClaw Plugin API
  *
  * These are minimal type definitions for OpenClaw's plugin API.
  * In production, the actual @types/openclaw package should be used.

@@ -9,7 +9,7 @@ import {
   conversationalStatusTool,
   conversationalHelpTool,
 } from "../index";
-import type { OpenClawPluginApi } from "../../types/openclaw-sdk";
+import type { OpenClawPluginApi } from "../../types/openclaw-plugin.js";
 
 // Mock OpenClaw API
 const createMockApi = (): OpenClawPluginApi => ({
