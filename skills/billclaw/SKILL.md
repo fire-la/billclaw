@@ -145,7 +145,6 @@ When installed in OpenClaw, this skill provides:
 
 - **Beancount**: Double-entry accounting format
 - **Ledger**: CLI accounting tool format
-- **CSV**: Spreadsheet-compatible format
 
 ### Security
 
