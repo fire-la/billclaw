@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- Fix npm publish workflow and release version 0.1.1.
+- Updated dependencies
+  - @fire-zu/billclaw-core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
