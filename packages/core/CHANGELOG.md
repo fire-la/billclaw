@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+### Patch Changes
+
+- Restore original publish workflow configuration to fix npm publishing.
+
 ## 0.1.2
 
 ### Patch Changes
