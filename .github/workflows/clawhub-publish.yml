@@ -21,6 +21,12 @@ jobs:
       - name: Install ClawHub CLI
         run: npm i -g clawhub
 
+      - name: Get version from package.json
+        id: get-version
+        run: |
+          VERSION=$(node -p "require('./packages/core/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Validate skill
         run: |
           chmod +x skills/billclaw/scripts/validate-skill.sh
@@ -28,13 +34,12 @@ jobs:
 
       - name: Publish to ClawHub
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
           clawhub login --token ${{ secrets.CLAWHUB_TOKEN }}
           clawhub publish ./skills/billclaw \
             --slug billclaw \
             --name "BillClaw" \
-            --version $VERSION \
+            --version ${{ steps.get-version.outputs.version }} \
             --tags latest \
-            --changelog "Release $VERSION: https://github.com/fire-zu/billclaw/releases/tag/v${VERSION}"
+            --changelog "Release ${{ steps.get-version.outputs.version }}: https://github.com/fire-zu/billclaw/releases/tag/v${{ steps.get-version.outputs.version }}"
         env:
           CLAWHUB_DISABLE_TELEMETRY: 1
