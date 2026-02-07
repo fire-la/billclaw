@@ -107,7 +107,6 @@ When installed in OpenClaw, this skill provides:
 
 - `plaid_sync` - Sync bank transactions from Plaid
 - `gmail_fetch` - Fetch bills from Gmail
-- `bill_parse` - Parse bill documents
 - `conversational_sync` - Natural language sync interface
 - `conversational_status` - Check sync status
 - `conversational_help` - Get help with commands
