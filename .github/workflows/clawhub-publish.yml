@@ -1,0 +1,40 @@
+name: Publish to ClawHub
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish-clawhub:
+    name: Publish BillClaw skill to ClawHub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ClawHub CLI
+        run: npm i -g clawhub
+
+      - name: Validate skill
+        run: |
+          chmod +x skills/billclaw/scripts/validate-skill.sh
+          ./skills/billclaw/scripts/validate-skill.sh skills/billclaw
+
+      - name: Publish to ClawHub
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          clawhub login --token ${{ secrets.CLAWHUB_TOKEN }}
+          clawhub publish ./skills/billclaw \
+            --slug billclaw \
+            --name "BillClaw" \
+            --version $VERSION \
+            --tags latest \
+            --changelog "Release $VERSION: https://github.com/fire-zu/billclaw/releases/tag/v${VERSION}"
+        env:
+          CLAWHUB_DISABLE_TELEMETRY: 1
