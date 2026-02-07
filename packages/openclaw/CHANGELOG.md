@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- Update npm token and test publishing version 0.1.2.
+- Updated dependencies
+  - @fire-zu/billclaw-core@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

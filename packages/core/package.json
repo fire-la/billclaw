@@ -1,6 +1,6 @@
 {
   "name": "@fire-zu/billclaw-core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "BillClaw Core - Framework-agnostic business logic for financial data import",
   "type": "module",
   "main": "./dist/index.js",
