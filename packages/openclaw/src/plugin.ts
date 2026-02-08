@@ -210,9 +210,12 @@ export default {
     const plaidSecret =
       cfg.plaid?.webhookSecret || process.env.PLAID_WEBHOOK_SECRET
 
+    // Webhook registration is now async (initializes Core components)
     registerWebhookHandlers({
       api,
       plaidWebhookSecret: plaidSecret,
+    }).catch((error) => {
+      api.logger.error?.("Failed to register webhook handlers:", error)
     })
 
     // ========================================================================
