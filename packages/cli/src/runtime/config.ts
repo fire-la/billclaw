@@ -1,13 +1,16 @@
 /**
  * CLI config provider implementation
  *
- * File-based configuration provider for standalone CLI usage.
+ * Refactored to use ConfigManager internally while maintaining
+ * backward compatibility with existing CLI code.
+ *
+ * @packageDocumentation
  */
 
-import * as fs from "node:fs"
 import * as path from "node:path"
 import * as os from "node:os"
 import type { ConfigProvider, BillclawConfig } from "@firela/billclaw-core"
+import { ConfigManager } from "@firela/billclaw-core"
 
 /**
  * CLI config provider options
@@ -27,40 +30,32 @@ function getDefaultConfigDir(): string {
 
 /**
  * CLI config provider implementation
+ *
+ * This is now a thin wrapper around ConfigManager that:
+ * - Maintains backward compatibility with CLI code
+ * - Provides CLI-specific options interface
+ * - Delegates all config operations to ConfigManager
+ *
+ * @deprecated Use ConfigManager directly when possible
  */
 export class CliConfigProvider implements ConfigProvider {
-  private configPath: string
-  private cachedConfig?: BillclawConfig
+  private configManager: ConfigManager
 
   constructor(options: CliConfigOptions = {}) {
-    const configDir = options.configDir ?? getDefaultConfigDir()
-    this.configPath = options.configPath ?? path.join(configDir, "config.json")
+    // Use getSharedConfigManager to handle singleton properly
+    // This ensures ConfigManager is initialized with correct path
+    this.configManager = getSharedConfigManager(options)
   }
 
   async getConfig(): Promise<BillclawConfig> {
-    if (this.cachedConfig) {
-      return this.cachedConfig
-    }
-
-    try {
-      const content = await fs.promises.readFile(this.configPath, "utf-8")
-      this.cachedConfig = (JSON.parse(content) as BillclawConfig)
-      return this.cachedConfig
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        // Return default config if file doesn't exist
-        this.cachedConfig = this.getDefaultConfig()
-        return this.cachedConfig
-      }
-      throw err
-    }
+    return this.configManager.getConfig()
   }
 
   async getStorageConfig(): Promise<any> {
     const config = await this.getConfig()
     return (
       config.storage || {
-        path: "~/.billclaw/data",
+        path: "~/.billclaw",
         format: "json",
         encryption: { enabled: false },
       }
@@ -68,76 +63,83 @@ export class CliConfigProvider implements ConfigProvider {
   }
 
   async updateAccount(accountId: string, updates: Partial<any>): Promise<void> {
-    const config = await this.getConfig()
-    const accountIndex = config.accounts.findIndex((a) => a.id === accountId)
-
-    if (accountIndex === -1) {
-      throw new Error(`Account ${accountId} not found`)
-    }
-
-    config.accounts[accountIndex] = {
-      ...config.accounts[accountIndex],
-      ...updates,
-    }
-
-    await this.saveConfig(config)
-    this.cachedConfig = config
+    return this.configManager.updateAccount(accountId, updates)
   }
 
   async getAccount(accountId: string): Promise<any | null> {
-    const config = await this.getConfig()
-    return config.accounts.find((a) => a.id === accountId) || null
+    return this.configManager.getAccount(accountId)
   }
 
+  /**
+   * Save config (legacy method for backward compatibility)
+   *
+   * @deprecated Use updateConfig() instead
+   */
   async saveConfig(config: BillclawConfig): Promise<void> {
-    const configDir = path.dirname(this.configPath)
-
-    // Ensure config directory exists
-    await fs.promises.mkdir(configDir, { recursive: true })
-
-    // Write config atomically
-    const tmpPath = `${this.configPath}.tmp`
-    await fs.promises.writeFile(
-      tmpPath,
-      JSON.stringify(config, null, 2),
-      "utf-8",
-    )
-    await fs.promises.rename(tmpPath, this.configPath)
-
-    this.cachedConfig = config
+    return this.configManager.updateConfig(config)
   }
 
-  private getDefaultConfig(): BillclawConfig {
-    return {
-      version: 1,
-      accounts: [],
-      webhooks: [],
-      storage: {
-        path: path.join(os.homedir(), ".billclaw"),
-        format: "json",
-        encryption: { enabled: false },
-      },
-      sync: {
-        defaultFrequency: "manual",
-        maxRetries: 3,
-        retryOnFailure: true,
-      },
-      plaid: {
-        environment: "sandbox",
-      },
-      connect: {
-        port: 4456,
-        host: "localhost",
-      },
-    }
+  /**
+   * Update full configuration
+   *
+   * @param updates - Partial config to merge with existing config
+   */
+  async updateConfig(updates: Partial<BillclawConfig>): Promise<void> {
+    return this.configManager.updateConfig(updates)
+  }
+
+  /**
+   * Get the underlying ConfigManager instance
+   *
+   * This provides access to extended ConfigManager functionality
+   * like getEffectiveConfig() and reloadConfig().
+   */
+  getConfigManager(): ConfigManager {
+    return this.configManager
   }
 }
 
 /**
  * Create a default CLI config provider
+ *
+ * @param options - CLI-specific config options
+ * @returns CliConfigProvider instance
  */
 export function createConfigProvider(
   options?: CliConfigOptions,
 ): CliConfigProvider {
   return new CliConfigProvider(options)
+}
+
+/**
+ * Get the default ConfigManager instance with CLI defaults
+ *
+ * This is a convenience function for CLI code that needs direct
+ * access to ConfigManager features.
+ *
+ * @param options - CLI-specific config options
+ * @returns ConfigManager singleton instance
+ */
+export function getSharedConfigManager(
+  options?: CliConfigOptions,
+): ConfigManager {
+  const configDir = options?.configDir ?? getDefaultConfigDir()
+  const configPath = options?.configPath ?? path.join(configDir, "config.json")
+
+  // Get or create singleton with the specified path
+  // Note: this requires resetting if a different path was used before
+  const existing = ConfigManager.getInstance() as any
+  if (existing["configPath"] !== configPath) {
+    // Reset singleton if path differs
+    ConfigManager.resetInstance()
+    return ConfigManager.getInstance({
+      configPath,
+      enableEnvOverrides: true,
+    })
+  }
+
+  return ConfigManager.getInstance({
+    configPath,
+    enableEnvOverrides: true,
+  })
 }
