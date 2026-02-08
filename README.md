@@ -178,6 +178,158 @@ source .env && node dist/server.js
 open http://localhost:4456
 ```
 
+## Production Deployment
+
+For real bank authentication (not sandbox), you need an external accessible URL since Plaid callbacks cannot reach `localhost`.
+
+### Quick Setup with ngrok (Testing)
+
+For testing real bank credentials without a domain:
+
+```bash
+# 1. Install ngrok
+brew install ngrok  # macOS
+# or download from https://ngrok.com
+
+# 2. Start Connect service
+cd packages/connect
+pnpm build
+node dist/server.js &
+# Service runs on http://localhost:4456
+
+# 3. Start ngrok tunnel (in another terminal)
+ngrok http 4456
+# Output: https://abc123.ngrok.io
+
+# 4. Update config with public URL
+cat > ~/.billclaw/config.json << EOF
+{
+  "version": 1,
+  "connect": {
+    "port": 4456,
+    "host": "localhost",
+    "publicUrl": "https://abc123.ngrok.io"
+  },
+  "plaid": {
+    "clientId": "your_production_client_id",
+    "secret": "your_production_secret",
+    "environment": "development"
+  }
+}
+EOF
+
+# 5. Add redirect URI in Plaid Dashboard
+# https://abc123.ngrok.io/oauth/plaid/callback
+```
+
+### VPS Deployment with HTTPS (Recommended)
+
+For production use with a custom domain:
+
+```bash
+# 1. Purchase VPS and domain (e.g., DigitalOcean, $5-20/month)
+#    VPS: 1-2GB RAM
+#    Domain: billclaw.yourdomain.com
+
+# 2. Configure DNS
+#    A record: billclaw -> your-vps-public-ip
+
+# 3. SSH into VPS and setup
+ssh root@your-vps-ip
+
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs git
+
+# Clone and build
+git clone https://github.com/fire-la/billclaw.git
+cd billclaw
+pnpm install
+pnpm build
+
+# 4. Get SSL certificate (Let's Encrypt)
+apt-get install -y certbot
+certbot certonly --standalone -d billclaw.yourdomain.com
+
+# 5. Configure production settings
+cat > ~/.billclaw/config.json << EOF
+{
+  "version": 1,
+  "connect": {
+    "port": 4456,
+    "host": "0.0.0.0",
+    "publicUrl": "https://billclaw.yourdomain.com",
+    "tls": {
+      "enabled": true,
+      "keyPath": "/etc/letsencrypt/live/billclaw.yourdomain.com/privkey.pem",
+      "certPath": "/etc/letsencrypt/live/billclaw.yourdomain.com/fullchain.pem"
+    }
+  },
+  "plaid": {
+    "clientId": "your_production_client_id",
+    "secret": "your_production_secret",
+    "environment": "production"
+  }
+}
+EOF
+
+# 6. Setup systemd service
+cat > /etc/systemd/system/billclaw-connect.service << 'EOF'
+[Unit]
+Description=BillClaw Connect Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/billclaw/packages/connect
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable billclaw-connect
+systemctl start billclaw-connect
+
+# 7. Verify
+curl https://billclaw.yourdomain.com/health
+# Should return: {"status":"ok","service":"billclaw-connect"}
+```
+
+**Important**: Add your production URL to Plaid Dashboard as a redirect URI:
+- `https://billclaw.yourdomain.com/oauth/plaid/callback`
+
+### Configuration Reference
+
+```json
+{
+  "connect": {
+    "port": 4456,
+    "host": "0.0.0.0",
+    "publicUrl": "https://billclaw.yourdomain.com",
+    "tls": {
+      "enabled": true,
+      "keyPath": "/path/to/key.pem",
+      "certPath": "/path/to/cert.pem"
+    }
+  }
+}
+```
+
+- **port**: Server port (default: 4456)
+- **host**: Bind address (0.0.0.0 for all interfaces, localhost for local only)
+- **publicUrl**: External URL for OAuth callbacks (required for production)
+- **tls.enabled**: Enable HTTPS (required for production)
+- **tls.keyPath**: Path to TLS private key
+- **tls.certPath**: Path to TLS certificate
+
+For more deployment scenarios, see [docs/architecture.md](./docs/architecture.md).
+
+---
+
 ### As OpenClaw Plugin
 
 ### As OpenClaw Plugin
