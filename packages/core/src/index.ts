@@ -77,5 +77,8 @@ export * from "./config/index.js"
 // Services (event emission, webhooks)
 export * from "./services/index.js"
 
+// Webhooks (inbound webhook processing)
+export * from "./webhooks/index.js"
+
 // Version
 export const VERSION = "0.0.1" as const
