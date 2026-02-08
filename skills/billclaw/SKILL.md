@@ -16,12 +16,13 @@ Use this skill when:
 - Exporting financial data to Beancount or Ledger formats
 - Managing local transaction storage with caching and indexing
 - Running financial data operations with full data sovereignty
+- Setting up OAuth authentication with Connect service
 
 ## Package Information
 
-- **Packages**: `@firela/billclaw-core`, `@firela/billclaw-cli`, `@firela/billclaw-openclaw`
+- **Packages**: `@firela/billclaw-core`, `@firela/billclaw-cli`, `@firela/billclaw-openclaw`, `@firela/billclaw-connect`
 - **Repository**: https://github.com/fire-la/billclaw
-- **Version**: 0.0.1
+- **Version**: 0.1.5
 - **License**: MIT
 
 ## Installation
@@ -46,6 +47,66 @@ pnpm add @firela/billclaw-core
 pnpm add @firela/billclaw-cli
 pnpm add @firela/billclaw-openclaw
 ```
+
+## Connect OAuth Service
+
+The `@firela/billclaw-connect` package provides a web-based OAuth service for authentication.
+
+### Local Development
+
+```bash
+cd packages/connect
+pnpm build
+
+# Configure ~/.billclaw/config.json
+cat > ~/.billclaw/config.json << EOF
+{
+  "version": 1,
+  "connect": {
+    "port": 4456,
+    "host": "localhost"
+  },
+  "plaid": {
+    "clientId": "your_client_id",
+    "secret": "your_secret",
+    "environment": "sandbox"
+  }
+}
+EOF
+
+# Start service
+node dist/server.js
+# Visit http://localhost:4456
+```
+
+### Production Deployment
+
+For real bank authentication, you need an external accessible URL:
+
+```bash
+# Using ngrok (for testing)
+ngrok http 4456
+# Configure publicUrl: "https://abc123.ngrok.io"
+
+# VPS with HTTPS
+{
+  "connect": {
+    "port": 4456,
+    "host": "0.0.0.0",
+    "publicUrl": "https://billclaw.yourdomain.com",
+    "tls": {
+      "enabled": true,
+      "keyPath": "/etc/letsencrypt/live/.../privkey.pem",
+      "certPath": "/etc/letsencrypt/live/.../fullchain.pem"
+    }
+  },
+  "plaid": {
+    "environment": "development"
+  }
+}
+```
+
+See README.md for detailed deployment scenarios.
 
 ## CLI Usage
 
@@ -79,8 +140,8 @@ billclaw sync --from 2024-01-01 --to 2024-12-31
 # View account status
 billclaw status
 
-# List all accounts
-billclaw config accounts
+# List all configuration
+billclaw config --list
 
 # View storage statistics
 billclaw status --storage
@@ -137,9 +198,10 @@ When installed in OpenClaw, this skill provides:
 
 - **Location**: `~/.billclaw/` (configurable)
 - **Format**: Monthly partitioned JSON files
-- **Caching**: TTL-based in-memory cache
+- **Caching**: TTL-based in-memory cache with mtime validation
 - **Deduplication**: 24-hour window based on transaction ID
 - **Streaming**: Efficient handling of large datasets
+- **File Locking**: Concurrent access safety with proper-lockfile
 
 ### Export Formats
 
@@ -155,41 +217,78 @@ When installed in OpenClaw, this skill provides:
 
 ## Configuration
 
-Configuration is stored in `~/.billclaw/config.yaml`:
+### Unified ConfigManager
 
-```yaml
-accounts:
-  - id: plaid-checking
-    type: plaid
-    name: "My Checking Account"
-    enabled: true
-    syncFrequency: daily
+BillClaw uses a unified `ConfigManager` for all components (CLI, Connect, OpenClaw):
 
-  - id: gmail-bills
-    type: gmail
-    name: "Bill Email Fetcher"
-    enabled: true
-    syncFrequency: daily
+- **File**: `~/.billclaw/config.json`
+- **Format**: JSON with Zod schema validation
+- **Caching**: 5-minute TTL + mtime validation
+- **File Locking**: Concurrent write safety
+- **Environment Variables**: Override config file values
 
-storage:
-  path: "~/.billclaw"
-  format: json
+### Configuration Structure
 
-sync:
-  defaultFrequency: daily
-  retryOnFailure: true
-  maxRetries: 3
+```json
+{
+  "version": 1,
+  "connect": {
+    "port": 4456,
+    "host": "localhost",
+    "publicUrl": "https://billclaw.yourdomain.com",
+    "tls": {
+      "enabled": false,
+      "keyPath": "/path/to/key.pem",
+      "certPath": "/path/to/cert.pem"
+    }
+  },
+  "plaid": {
+    "clientId": "your_client_id",
+    "secret": "your_secret",
+    "environment": "sandbox",
+    "webhookUrl": "https://your-domain.com/webhook/plaid"
+  },
+  "gmail": {
+    "clientId": "your_gmail_client_id",
+    "clientSecret": "your_gmail_client_secret",
+    "senderWhitelist": ["billing@service.com"]
+  },
+  "storage": {
+    "path": "~/.billclaw",
+    "format": "json",
+    "encryption": { "enabled": false }
+  },
+  "sync": {
+    "defaultFrequency": "daily",
+    "retryOnFailure": true,
+    "maxRetries": 3
+  },
+  "accounts": [],
+  "webhooks": []
+}
 ```
+
+### Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `PORT`, `HOST` | Connect service settings |
+| `PUBLIC_URL` | External URL for OAuth (production) |
+| `TLS_ENABLED`, `TLS_KEY_PATH`, `TLS_CERT_PATH` | HTTPS configuration |
+| `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENVIRONMENT` | Plaid settings |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | Gmail settings |
+
+**Priority**: Environment variables > Config file > Defaults
 
 ## Runtime Abstractions
 
 The core package is framework-agnostic and uses runtime abstractions:
 
 - **Logger**: Abstract logging interface
-- **ConfigProvider**: Configuration management
+- **ConfigProvider**: Configuration management (ConfigManager)
 - **EventEmitter**: Event system for sync operations
 
-This allows BillClaw to work across different environments (CLI, OpenClaw plugin, future platforms).
+This allows BillClaw to work across different environments (CLI, OpenClaw plugin, Connect service).
 
 ## Event System
 
@@ -203,6 +302,56 @@ BillClaw emits events for important operations:
 - `account.connected` - Account successfully connected
 - `account.disconnected` - Account disconnected
 - `account.error` - Account error occurred
+
+## Architecture
+
+### Framework-Agnostic Core
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      BillClaw Monorepo                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────────┐  ┌──────────────────┐               │
+│  │  OpenClaw Plugin │  │   Standalone CLI │               │
+│  │  (AI Framework)  │  │   (Terminal)     │               │
+│  └────────┬─────────┘  └────────┬─────────┘               │
+│           │                      │                          │
+│           └──────────┬───────────┘                          │
+│                      ▼                                      │
+│           ┌────────────────────┐                           │
+│           │  @firela/billclaw-core  │                     │
+│           │  (Framework-Agnostic) │                         │
+│           │  ├─ ConfigManager    │                         │
+│           │  ├─ OAuth Core       │                         │
+│           │  ├─ Storage          │                         │
+│           │  └─ Sources          │                         │
+│           └────────┬────────────┘                           │
+│                      │                                      │
+│           ┌──────────┴──────────────────────┐             │
+│           ▼                                 ▼             │
+│    ┌──────────────┐              ┌──────────────┐       │
+│    │  OpenClaw    │              │     CLI      │       │
+│    │  Adapter     │              │   Adapter    │       │
+│    └──────────────┘              └──────────────┘       │
+│           │                                 │             │
+│           └──────────┬──────────────────────────┘             │
+│                      ▼                                        │
+│           ┌────────────────────┐                             │
+│           │  @firela/            │                             │
+│           │  billclaw-connect    │                             │
+│           │  (OAuth Service)      │                             │
+│           └────────────────────┘                             │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Design Principles
+
+1. **Framework-Agnostic** - Core business logic independent of AI frameworks
+2. **Adapter Pattern** - Each framework uses adapters to call core
+3. **Local-First** - Service runs on user's machine
+4. **Data Sovereignty** - User owns their data
 
 ## Scripts
 
@@ -224,16 +373,39 @@ This checks:
 
 ### Issue: Plaid Link fails
 
-**Solution**: Ensure Plaid credentials are configured:
-```bash
-billclaw config plaid --client-id <id> --secret <secret>
+**Solution**: Ensure Plaid credentials are configured in `~/.billclaw/config.json`:
+```json
+{
+  "plaid": {
+    "clientId": "your_client_id",
+    "secret": "your_secret",
+    "environment": "sandbox"
+  }
+}
 ```
+
+### Issue: Production OAuth callback fails
+
+**Solution**: Configure `publicUrl` for external access:
+```json
+{
+  "connect": {
+    "publicUrl": "https://billclaw.yourdomain.com"
+  }
+}
+```
+
+Add the redirect URI in Plaid Dashboard: `https://billclaw.yourdomain.com/oauth/plaid/callback`
 
 ### Issue: Gmail fetch returns no bills
 
-**Solution**: Check Gmail filters and sender whitelist:
-```bash
-billclaw config gmail --filters "from:billing@service.com"
+**Solution**: Check Gmail filters and sender whitelist in config:
+```json
+{
+  "gmail": {
+    "senderWhitelist": ["billing@service.com"]
+  }
+}
 ```
 
 ### Issue: Export format incorrect
@@ -243,9 +415,19 @@ billclaw config gmail --filters "from:billing@service.com"
 billclaw export --format beancount --show-mappings
 ```
 
+### Issue: Concurrent config access errors
+
+**Solution**: ConfigManager uses file locking automatically. If errors persist, check file permissions:
+```bash
+ls -la ~/.billclaw/config.json
+chmod 600 ~/.billclaw/config.json
+```
+
 ## Resources
 
 - **Documentation**: https://github.com/fire-la/billclaw
+- **Architecture**: docs/architecture.md
+- **Deployment Guide**: README.md#production-deployment
 - **npm packages**: https://www.npmjs.com/org/firela
 - **Issues**: https://github.com/fire-la/billclaw/issues
 
@@ -258,6 +440,17 @@ Contributions are welcome! Please see CONTRIBUTING.md in the repository.
 MIT License - See LICENSE file for details.
 
 ## Changelog
+
+### 0.1.5 (2026-02-08)
+
+Phase 0 Architecture Refactoring:
+- ✅ Added unified ConfigManager for centralized configuration
+- ✅ Created `@firela/billclaw-connect` OAuth service package
+- ✅ Implemented adapter pattern for OpenClaw/CLI/Connect
+- ✅ Added complete OAuth flow with web UI
+- ✅ Added publicUrl and HTTPS/TLS support for production deployment
+- ✅ Refactored CLI to use ConfigManager internally
+- ✅ Added comprehensive deployment documentation
 
 ### 0.0.1 (2025-02-07)
 
