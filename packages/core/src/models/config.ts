@@ -166,6 +166,27 @@ export type GmailConfig = z.infer<typeof GmailConfigSchema>
 export const ConnectConfigSchema = z.object({
   port: z.number().int().min(1).max(65535).default(4456),
   host: z.string().default("localhost"),
+  /**
+   * Public URL for external access (required for production OAuth callbacks)
+   *
+   * Examples:
+   * - https://billclaw.yourdomain.com
+   * - https://abc123.ngrok.io (for tunneling)
+   *
+   * If not set, defaults to http://localhost:{port} for local development.
+   */
+  publicUrl: z.string().url().optional(),
+  /**
+   * TLS/SSL configuration for HTTPS support
+   */
+  tls: z
+    .object({
+      enabled: z.boolean().default(false),
+      keyPath: z.string().optional(),
+      certPath: z.string().optional(),
+    })
+    .default({ enabled: false })
+    .optional(),
 })
 export type ConnectConfig = z.infer<typeof ConnectConfigSchema>
 

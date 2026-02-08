@@ -13,6 +13,12 @@ const ENV_MAPPINGS: Record<string, string> = {
   // Connect service
   PORT: "connect.port",
   HOST: "connect.host",
+  PUBLIC_URL: "connect.publicUrl",
+
+  // TLS/SSL
+  TLS_ENABLED: "connect.tls.enabled",
+  TLS_KEY_PATH: "connect.tls.keyPath",
+  TLS_CERT_PATH: "connect.tls.certPath",
 
   // Plaid
   PLAID_CLIENT_ID: "plaid.clientId",
