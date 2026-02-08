@@ -11,9 +11,15 @@ import https from "https"
 import path from "path"
 import { fileURLToPath } from "url"
 import { readFileSync } from "fs"
+import rateLimit from "express-rate-limit"
 import { ConfigManager } from "@firela/billclaw-core"
 import { plaidRouter } from "./routes/plaid.js"
 import { gmailRouter } from "./routes/gmail.js"
+import {
+  initializeWebhooks,
+  setAccountFinder,
+  createWebhookRoutes,
+} from "./routes/webhooks.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -24,6 +30,13 @@ const __dirname = path.dirname(__filename)
 async function startServer() {
   const configManager = ConfigManager.getInstance()
   const connectConfig = await configManager.getServiceConfig("connect")
+  const config = await configManager.getConfig()
+
+  // Get storage base path for webhook cache
+  const storageBase = config.storage?.path || "~/.billclaw"
+  const basePath = storageBase.startsWith("~")
+    ? storageBase.replace("~", process.env.HOME || "")
+    : storageBase
 
   const PORT = connectConfig.port
   const HOST = connectConfig.host
@@ -35,6 +48,42 @@ async function startServer() {
   // Middleware
   app.use(express.json())
   app.use(express.urlencoded({ extended: true }))
+
+  // P0: Rate limiting middleware
+  // Separate rate limits for different webhook sources
+  const plaidRateLimit = rateLimit({
+    windowMs: 60_000, // 1 minute
+    max: 100, // 100 requests per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      received: false,
+      error: "Too many requests from this IP, please try again later",
+    },
+    skipSuccessfulRequests: false,
+  })
+
+  const gocardlessRateLimit = rateLimit({
+    windowMs: 60_000,
+    max: 50, // 50 requests per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      received: false,
+      error: "Too many requests from this IP, please try again later",
+    },
+  })
+
+  const testRateLimit = rateLimit({
+    windowMs: 60_000,
+    max: 30, // 30 requests per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      received: false,
+      error: "Too many test requests from this IP, please try again later",
+    },
+  })
 
   // Make publicUrl available to all routes
   app.use((req, _res, next) => {
@@ -54,6 +103,26 @@ async function startServer() {
   app.use("/oauth/plaid", plaidRouter)
   app.use("/oauth/gmail", gmailRouter)
 
+  // Initialize webhook components
+  const plaidSecret = process.env.PLAID_WEBHOOK_SECRET
+  await initializeWebhooks(basePath, plaidSecret)
+
+  // Set account finder (for webhook-triggered syncs)
+  // This is a stub - full implementation would require access to Billclaw instance
+  setAccountFinder(async (_itemId: string) => {
+    // Stub: Return null (no account found)
+    // Full implementation would read from config and find account by plaidItemId
+    return null
+  })
+
+  // Webhook routes with rate limiting
+  const webhookRoutes = createWebhookRoutes()
+
+  // Apply rate limiting to webhook routes
+  app.use("/webhook/plaid", plaidRateLimit, webhookRoutes)
+  app.use("/webhook/gocardless", gocardlessRateLimit, webhookRoutes)
+  app.use("/webhook/test", testRateLimit, webhookRoutes)
+
   // Default route
   app.get("/", (_req, res) => {
     res.json({
@@ -63,8 +132,15 @@ async function startServer() {
       tlsEnabled: tls?.enabled || false,
       endpoints: {
         health: "/health",
-        plaid: "/oauth/plaid",
-        gmail: "/oauth/gmail",
+        oauth: {
+          plaid: "/oauth/plaid",
+          gmail: "/oauth/gmail",
+        },
+        webhooks: {
+          plaid: "/webhook/plaid",
+          gocardless: "/webhook/gocardless",
+          test: "/webhook/test",
+        },
       },
     })
   })
