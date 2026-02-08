@@ -15,6 +15,7 @@ export { syncCommand } from "./sync.js"
 export { statusCommand } from "./status.js"
 export { configCommand } from "./config.js"
 export { exportCommand } from "./export.js"
+export { webhookTestCommand } from "./webhook.js"
 /**
  * All commands to register
  */
@@ -24,4 +25,5 @@ export const allCommands = [
   { status: () => import("./status.js").then((m) => m.statusCommand) },
   { config: () => import("./config.js").then((m) => m.configCommand) },
   { export: () => import("./export.js").then((m) => m.exportCommand) },
+  { webhook: () => import("./webhook.js").then((m) => m.webhookTestCommand) },
 ]
