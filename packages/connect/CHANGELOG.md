@@ -1,5 +1,25 @@
 # @firela/billclaw-connect
 
+## 0.4.0
+
+### Minor Changes
+
+- e871be0: Add security declaration and clarify installation for OpenClaw users:
+
+  - Add Security & Privacy section with keychain storage explanation
+  - Add Credential Storage Summary table
+  - Split Installation into OpenClaw and CLI sections
+  - Clarify OpenClaw users don't need external npm packages
+  - Add Security Disclosure section with vulnerability reporting
+
+  This addresses the 'Suspicious' security scan label by providing
+  transparency about security architecture and data handling practices.
+
+### Patch Changes
+
+- Updated dependencies [e871be0]
+  - @firela/billclaw-core@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
