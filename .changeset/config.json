@@ -4,7 +4,7 @@
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@firela/billclaw-core", "@firela/billclaw-cli", "@firela/billclaw-openclaw"]
+    ["@firela/billclaw-core", "@firela/billclaw-cli", "@firela/billclaw-openclaw", "@firela/billclaw-connect"]
   ],
   "access": "public",
   "baseBranch": "main",
