@@ -51,9 +51,18 @@ jobs:
         run: |
           for package in packages/*; do
             if [ -f "$package/package.json" ]; then
-              echo "Publishing $package..."
               cd "$package"
-              pnpm publish --access public --no-git-checks
+              PACKAGE_NAME=$(node -p "require('./package.json').name")
+              PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+              # Check if package version is already published
+              echo "Checking if $PACKAGE_NAME@$PACKAGE_VERSION is already published..."
+              if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" > /dev/null 2>&1; then
+                echo "✓ $PACKAGE_NAME@$PACKAGE_VERSION is already published, skipping..."
+              else
+                echo "Publishing $PACKAGE_NAME@$PACKAGE_VERSION..."
+                pnpm publish --access public --no-git-checks
+              fi
               cd ../..
             fi
           done
