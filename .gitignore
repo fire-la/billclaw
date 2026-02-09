@@ -39,12 +39,5 @@ coverage
 .temp
 tmp
 
-# Documentation
-docs/
-
 # ClawHub
 .clawhub/
-
-# Claude Code
-.claude/
-CLAUDE.md

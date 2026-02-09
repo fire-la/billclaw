@@ -1,0 +1,3 @@
+[submodule "billclaw-docs"]
+	path = billclaw-docs
+	url = git@github.com:fire-zu/billclaw-docs.git
