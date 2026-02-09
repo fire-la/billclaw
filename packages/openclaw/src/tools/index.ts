@@ -2,7 +2,9 @@
  * OpenClaw tool adapters for BillClaw
  *
  * These adapters wrap the core BillClaw functionality to work with
- * OpenClaw's tool API.
+ * OpenClaw's tool API. Returns dual-mode output:
+ * - machineReadable: Structured data for AI agents to parse and act on
+ * - humanReadable: Formatted text for display to users
  */
 
 import type { OpenClawPluginApi } from "../types/openclaw-plugin.js"
@@ -43,7 +45,41 @@ export const plaidSyncTool = {
       (sum, r) => sum + r.transactionsUpdated,
       0,
     )
-    const errors = results.flatMap((r) => r.errors || [])
+    const userErrors = results.flatMap((r) => r.errors || [])
+    const hasErrors = userErrors.length > 0
+
+    // Machine-readable output for AI agents
+    const machineReadable = {
+      success: !hasErrors,
+      accountsSynced: results.length,
+      transactionsAdded: totalAdded,
+      transactionsUpdated: totalUpdated,
+      errors: hasErrors
+        ? userErrors.map((e) => ({
+            errorCode: e.errorCode,
+            category: e.category,
+            severity: e.severity,
+            recoverable: e.recoverable,
+            nextActions: e.nextActions,
+            entities: e.entities,
+          }))
+        : undefined,
+    }
+
+    // Human-readable output for display
+    const humanReadable = {
+      success: !hasErrors,
+      accountsSynced: results.length,
+      transactionsAdded: totalAdded,
+      transactionsUpdated: totalUpdated,
+      errors: hasErrors
+        ? userErrors.map((e) => ({
+            title: e.humanReadable.title,
+            message: e.humanReadable.message,
+            suggestions: e.humanReadable.suggestions,
+          }))
+        : undefined,
+    }
 
     return {
       content: [
@@ -51,11 +87,8 @@ export const plaidSyncTool = {
           type: "text",
           text: JSON.stringify(
             {
-              success: errors.length === 0,
-              accountsSynced: results.length,
-              transactionsAdded: totalAdded,
-              transactionsUpdated: totalUpdated,
-              errors: errors.length > 0 ? errors : undefined,
+              machineReadable,
+              humanReadable,
             },
             null,
             2,
@@ -99,7 +132,43 @@ export const gmailFetchTool = {
     const totalEmails = results.reduce((sum, r) => sum + r.emailsProcessed, 0)
     const totalBills = results.reduce((sum, r) => sum + r.billsExtracted, 0)
     const totalAdded = results.reduce((sum, r) => sum + r.transactionsAdded, 0)
-    const errors = results.flatMap((r) => r.errors || [])
+    const userErrors = results.flatMap((r) => r.errors || [])
+    const hasErrors = userErrors.length > 0
+
+    // Machine-readable output for AI agents
+    const machineReadable = {
+      success: !hasErrors,
+      accountsProcessed: results.length,
+      emailsProcessed: totalEmails,
+      billsExtracted: totalBills,
+      transactionsAdded: totalAdded,
+      errors: hasErrors
+        ? userErrors.map((e) => ({
+            errorCode: e.errorCode,
+            category: e.category,
+            severity: e.severity,
+            recoverable: e.recoverable,
+            nextActions: e.nextActions,
+            entities: e.entities,
+          }))
+        : undefined,
+    }
+
+    // Human-readable output for display
+    const humanReadable = {
+      success: !hasErrors,
+      accountsProcessed: results.length,
+      emailsProcessed: totalEmails,
+      billsExtracted: totalBills,
+      transactionsAdded: totalAdded,
+      errors: hasErrors
+        ? userErrors.map((e) => ({
+            title: e.humanReadable.title,
+            message: e.humanReadable.message,
+            suggestions: e.humanReadable.suggestions,
+          }))
+        : undefined,
+    }
 
     return {
       content: [
@@ -107,12 +176,8 @@ export const gmailFetchTool = {
           type: "text",
           text: JSON.stringify(
             {
-              success: errors.length === 0,
-              accountsProcessed: results.length,
-              emailsProcessed: totalEmails,
-              billsExtracted: totalBills,
-              transactionsAdded: totalAdded,
-              errors: errors.length > 0 ? errors : undefined,
+              machineReadable,
+              humanReadable,
             },
             null,
             2,
@@ -205,7 +270,41 @@ export const conversationalSyncTool = {
       (sum, r) => sum + r.transactionsUpdated,
       0,
     )
-    const errors = results.flatMap((r) => r.errors || [])
+    const userErrors = results.flatMap((r) => r.errors || [])
+    const hasErrors = userErrors.length > 0
+
+    // Machine-readable output for AI agents
+    const machineReadable = {
+      success: !hasErrors,
+      accountsSynced: results.length,
+      transactionsAdded: totalAdded,
+      transactionsUpdated: totalUpdated,
+      errors: hasErrors
+        ? userErrors.map((e) => ({
+            errorCode: e.errorCode,
+            category: e.category,
+            severity: e.severity,
+            recoverable: e.recoverable,
+            nextActions: e.nextActions,
+            entities: e.entities,
+          }))
+        : undefined,
+    }
+
+    // Human-readable output for display
+    const humanReadable = {
+      success: !hasErrors,
+      accountsSynced: results.length,
+      transactionsAdded: totalAdded,
+      transactionsUpdated: totalUpdated,
+      errors: hasErrors
+        ? userErrors.map((e) => ({
+            title: e.humanReadable.title,
+            message: e.humanReadable.message,
+            suggestions: e.humanReadable.suggestions,
+          }))
+        : undefined,
+    }
 
     return {
       content: [
@@ -213,11 +312,8 @@ export const conversationalSyncTool = {
           type: "text",
           text: JSON.stringify(
             {
-              success: errors.length === 0,
-              accountsSynced: results.length,
-              transactionsAdded: totalAdded,
-              transactionsUpdated: totalUpdated,
-              errors: errors.length > 0 ? errors : undefined,
+              machineReadable,
+              humanReadable,
             },
             null,
             2,

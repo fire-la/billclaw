@@ -9,7 +9,8 @@ import type {
   Transaction,
   SyncState,
 } from "../../storage/transaction-storage.js"
-import type { Logger } from "../../errors/errors.js"
+import type { Logger, UserError } from "../../errors/errors.js"
+import { parsePlaidError, ERROR_CODES } from "../../errors/errors.js"
 import {
   appendTransactions,
   deduplicateTransactions,
@@ -36,7 +37,7 @@ export interface PlaidSyncResult {
   transactionsAdded: number
   transactionsUpdated: number
   cursor: string
-  errors?: string[]
+  errors?: UserError[]
   requiresReauth?: boolean
 }
 
@@ -89,6 +90,67 @@ export function convertTransaction(
 }
 
 /**
+ * Retry Plaid API call with exponential backoff
+ *
+ * Retries on:
+ * - 500 (Internal Server Error)
+ * - 502 (Bad Gateway)
+ * - 503 (Service Unavailable)
+ * - 504 (Gateway Timeout)
+ * - 429 (Rate Limit Exceeded)
+ *
+ * @param fn - Function to retry
+ * @param maxRetries - Maximum number of retries (default: 3)
+ * @param logger - Logger for debug output
+ * @returns Result of the function
+ */
+async function retryPlaidCall<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  logger?: Logger,
+): Promise<T> {
+  let lastError: Error | undefined
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error as Error
+
+      // Check if error is retryable
+      const isRetryable =
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        typeof (error as any).response?.status === "number"
+          ? [500, 502, 503, 504, 429].includes(
+              (error as any).response.status,
+            )
+          : false
+
+      // Don't retry if not retryable or this is the last attempt
+      if (!isRetryable || attempt === maxRetries) {
+        throw error
+      }
+
+      // Calculate exponential backoff delay
+      const baseDelay = 1000 // 1 second
+      const maxDelay = 10000 // 10 seconds max
+      const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay)
+
+      logger?.debug?.(
+        `Plaid API call failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms...`,
+      )
+
+      // Wait before retry
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+
+  throw lastError || new Error("Retry failed")
+}
+
+/**
  * Sync transactions from a single Plaid account
  */
 export async function syncPlaidAccount(
@@ -98,7 +160,7 @@ export async function syncPlaidAccount(
   logger: Logger,
   webhooks: WebhookConfig[] = [],
 ): Promise<PlaidSyncResult> {
-  const errors: string[] = []
+  const errors: UserError[] = []
   let transactionsAdded = 0
   let transactionsUpdated = 0
   let cursor = ""
@@ -133,7 +195,12 @@ export async function syncPlaidAccount(
       count: 500,
     }
 
-    const axiosResponse = await plaidClient.transactionsSync(request)
+    // Use retry logic for Plaid API call
+    const axiosResponse = await retryPlaidCall(
+      async () => await plaidClient.transactionsSync(request),
+      3, // max 3 retries
+      logger,
+    )
     const response: TransactionsSyncResponse = axiosResponse.data
 
     cursor = response.next_cursor || ""
@@ -198,38 +265,53 @@ export async function syncPlaidAccount(
       duration: syncDuration,
     }).catch((err) => logger.debug?.(`Event emission failed:`, err))
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Unknown error"
-    errors.push(errorMsg)
+    // Parse Plaid error to get UserError
+    let userError: UserError
+    if (error && typeof error === "object") {
+      const plaidError = error as any
+      userError = parsePlaidError(
+        {
+          error_code: plaidError.code || plaidError.error_code,
+          error_message: plaidError.message || plaidError.error_message,
+          error_type: plaidError.error_type,
+          display_message: plaidError.display_message,
+          request_id: plaidError.request_id,
+          item_id: account.id,
+        },
+        account.id,
+      )
+    } else {
+      // Generic error fallback
+      userError = parsePlaidError(
+        {
+          error_message: error instanceof Error ? error.message : "Unknown error",
+        },
+        account.id,
+      )
+    }
+
+    errors.push(userError)
     syncState.status = "failed"
-    syncState.error = errorMsg
+    syncState.error = userError.humanReadable.message
     logger.error?.(`Sync failed for ${account.id}:`, error)
 
     // Emit sync.failed event (fire-and-forget)
     emitEvent(logger, webhooks, "sync.failed", {
       accountId: account.id,
       syncId,
-      error: errorMsg,
+      error: userError.humanReadable.message,
+      errorCode: userError.errorCode,
     }).catch((err) => logger.debug?.(`Event emission failed:`, err))
 
     // Check for Plaid-specific errors that require user action
-    if (error && typeof error === "object") {
-      const plaidError = error as any
-      const errorCode = plaidError.code || plaidError.error_code
-
-      // Item login errors - user needs to re-authenticate via Plaid Link
-      if (
-        errorCode === "ITEM_LOGIN_REQUIRED" ||
-        errorCode === "INVALID_ACCESS_TOKEN" ||
-        errorCode === "PRODUCTS_NOT_READY" ||
-        plaidError.response?.data?.error_code === "ITEM_LOGIN_REQUIRED"
-      ) {
-        logger.warn?.(
-          `Account ${account.id} requires re-authentication via Plaid Link`,
-        )
-        syncState.error = `ITEM_LOGIN_REQUIRED: Please re-connect this account via Plaid Link`
-        syncState.requiresReauth = true
-        requiresReauth = true
-      }
+    if (userError.errorCode === ERROR_CODES.PLAID_ITEM_LOGIN_REQUIRED ||
+        userError.errorCode === ERROR_CODES.PLAID_INVALID_ACCESS_TOKEN) {
+      logger.warn?.(
+        `Account ${account.id} requires re-authentication via Plaid Link`,
+      )
+      syncState.error = `ITEM_LOGIN_REQUIRED: Please re-connect this account via Plaid Link`
+      syncState.requiresReauth = true
+      requiresReauth = true
     }
   } finally {
     await writeSyncState(syncState, storageConfig)

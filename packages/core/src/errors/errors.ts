@@ -1,8 +1,9 @@
 /**
  * Error handling utilities for BillClaw
  *
- * Provides user-friendly error messages, recovery suggestions,
- * and troubleshooting guides.
+ * Provides dual-mode error handling:
+ * - Machine-readable: For AI agents (error codes, severity, executable actions)
+ * - Human-readable: For display (title, message, suggestions)
  *
  * Framework-agnostic: Logger is provided via runtime abstraction.
  */
@@ -34,16 +35,144 @@ export enum ErrorCategory {
 }
 
 /**
- * User-friendly error with recovery suggestions
+ * Error codes for programmatic error handling
+ * Used by AI agents for switch/case logic and decision making
  */
-export interface UserError {
-  type: "UserError" // Type discriminator
-  category: ErrorCategory
+export const ERROR_CODES = {
+  // Lock errors
+  LOCK_ACQUISITION_FAILED: "LOCK_ACQUISITION_FAILED",
+  LOCK_TIMEOUT: "LOCK_TIMEOUT",
+  LOCK_STALE: "LOCK_STALE",
+
+  // Credential errors
+  CREDENTIALS_NOT_FOUND: "CREDENTIALS_NOT_FOUND",
+  CREDENTIALS_STORAGE_FAILED: "CREDENTIALS_STORAGE_FAILED",
+  CREDENTIALS_KEYCHAIN_FAILED: "CREDENTIALS_KEYCHAIN_FAILED",
+
+  // Network errors
+  NETWORK_CONNECTION_REFUSED: "NETWORK_CONNECTION_REFUSED",
+  NETWORK_TIMEOUT: "NETWORK_TIMEOUT",
+  NETWORK_DNS_FAILED: "NETWORK_DNS_FAILED",
+  NETWORK_GENERIC: "NETWORK_GENERIC",
+
+  // Plaid errors
+  PLAID_ITEM_LOGIN_REQUIRED: "PLAID_ITEM_LOGIN_REQUIRED",
+  PLAID_INVALID_ACCESS_TOKEN: "PLAID_INVALID_ACCESS_TOKEN",
+  PLAID_PRODUCT_NOT_READY: "PLAID_PRODUCT_NOT_READY",
+  PLAID_RATE_LIMIT_EXCEEDED: "PLAID_RATE_LIMIT_EXCEEDED",
+  PLAID_INSTITUTION_DOWN: "PLAID_INSTITUTION_DOWN",
+  PLAID_INVALID_CREDENTIALS: "PLAID_INVALID_CREDENTIALS",
+  PLAID_API_ERROR: "PLAID_API_ERROR",
+
+  // Gmail errors
+  GMAIL_AUTH_FAILED: "GMAIL_AUTH_FAILED",
+  GMAIL_ACCESS_DENIED: "GMAIL_ACCESS_DENIED",
+  GMAIL_API_NOT_FOUND: "GMAIL_API_NOT_FOUND",
+  GMAIL_RATE_LIMIT_EXCEEDED: "GMAIL_RATE_LIMIT_EXCEEDED",
+  GMAIL_API_ERROR: "GMAIL_API_ERROR",
+
+  // Storage errors
+  STORAGE_DISK_FULL: "STORAGE_DISK_FULL",
+  STORAGE_WRITE_FAILED: "STORAGE_WRITE_FAILED",
+  STORAGE_READ_FAILED: "STORAGE_READ_FAILED",
+
+  // File system errors
+  FS_PERMISSION_DENIED: "FS_PERMISSION_DENIED",
+  FS_NOT_FOUND: "FS_NOT_FOUND",
+  FS_GENERIC: "FS_GENERIC",
+
+  // Config errors
+  CONFIG_INVALID: "CONFIG_INVALID",
+  CONFIG_MISSING: "CONFIG_MISSING",
+  CONFIG_PARSE_FAILED: "CONFIG_PARSE_FAILED",
+
+  // Generic
+  UNKNOWN_ERROR: "UNKNOWN_ERROR",
+} as const
+
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]
+
+/**
+ * Severity levels for error prioritization
+ */
+export type ErrorSeverity = "fatal" | "error" | "warning" | "info"
+
+/**
+ * AI-executable action types
+ * These represent actions an AI agent can take to recover from errors
+ */
+export type ActionType =
+  | "retry" // Retry the operation with optional delay
+  | "oauth_reauth" // Trigger OAuth re-authentication flow
+  | "config_change" // Request configuration change
+  | "abort" // Abort the operation
+  | "wait" // Wait for a condition before retrying
+  | "manual_intervention" // Require human assistance
+  | "ignore" // Error can be safely ignored
+
+/**
+ * AI-executable action for error recovery
+ */
+export interface ErrorAction {
+  type: ActionType
+  tool?: string // Tool name to call (e.g., "plaid_oauth")
+  params?: Record<string, unknown> // Parameters for the action
+  delayMs?: number // Delay before retry (for retry action)
+  description?: string // Human-readable description of the action
+}
+
+/**
+ * Structured entity references for error context
+ * Helps AI agents identify which entities are affected by the error
+ */
+export interface ErrorEntities {
+  accountId?: string
+  institutionId?: string
+  itemId?: string
+  filePath?: string
+  configKey?: string
+  [key: string]: string | undefined
+}
+
+/**
+ * Human-readable error information
+ * Used for display to users
+ */
+export interface HumanReadableError {
   title: string
   message: string
   suggestions: string[]
   docsLink?: string
-  error?: Error // Original error for debugging
+}
+
+/**
+ * User-friendly error with dual-mode support
+ *
+ * - Machine-readable fields: errorCode, severity, recoverable, nextActions, entities
+ * - Human-readable fields: humanReadable (title, message, suggestions, docsLink)
+ */
+export interface UserError {
+  // === Type discriminator ===
+  type: "UserError"
+
+  // === Machine-readable fields (AI agents) ===
+  errorCode: ErrorCode
+  category: ErrorCategory
+  severity: ErrorSeverity
+  recoverable: boolean
+
+  // === AI-executable actions ===
+  nextActions?: ErrorAction[]
+
+  // === Structured entity references ===
+  entities?: ErrorEntities
+
+  // === Human-readable fields (display) ===
+  humanReadable: HumanReadableError
+
+  // === Debug info ===
+  originalError?: Error
+  timestamp?: string
 }
 
 /**
@@ -57,57 +186,90 @@ export interface Logger {
 }
 
 /**
- * Create a user-friendly error
+ * Create a user-friendly error with dual-mode support
+ *
+ * @param errorCode - Machine-readable error code
+ * @param category - Error category
+ * @param severity - Error severity level
+ * @param recoverable - Whether the error is recoverable
+ * @param humanReadable - Human-readable error information
+ * @param nextActions - AI-executable recovery actions
+ * @param entities - Structured entity references
+ * @param originalError - Original error for debugging
  */
 export function createUserError(
+  errorCode: ErrorCode,
   category: ErrorCategory,
-  title: string,
-  message: string,
-  suggestions: string[],
-  docsLink?: string,
+  severity: ErrorSeverity,
+  recoverable: boolean,
+  humanReadable: HumanReadableError,
+  nextActions?: ErrorAction[],
+  entities?: ErrorEntities,
   originalError?: Error,
 ): UserError {
   return {
     type: "UserError",
+    errorCode,
     category,
-    title,
-    message,
-    suggestions,
-    docsLink,
-    error: originalError,
+    severity,
+    recoverable,
+    humanReadable,
+    nextActions,
+    entities,
+    originalError,
+    timestamp: new Date().toISOString(),
   }
 }
 
 /**
  * Format error for display to user
+ * Uses the humanReadable field for user-friendly output
  */
 export function formatError(error: UserError): string {
   const lines: string[] = []
 
-  // Header with category emoji
+  // Header with category emoji and severity
   const categoryEmoji = getCategoryEmoji(error.category)
-  lines.push(`${categoryEmoji} ${error.title}`)
+  const severityIndicator = getSeverityIndicator(error.severity)
+  lines.push(`${categoryEmoji} ${error.humanReadable.title} ${severityIndicator}`)
   lines.push("")
 
   // Message
-  lines.push(error.message)
+  lines.push(error.humanReadable.message)
   lines.push("")
 
   // Suggestions
-  if (error.suggestions.length > 0) {
+  if (error.humanReadable.suggestions.length > 0) {
     lines.push("Suggestions:")
-    for (let i = 0; i < error.suggestions.length; i++) {
-      lines.push(`   ${i + 1}. ${error.suggestions[i]}`)
+    for (let i = 0; i < error.humanReadable.suggestions.length; i++) {
+      lines.push(`   ${i + 1}. ${error.humanReadable.suggestions[i]}`)
     }
   }
 
   // Docs link
-  if (error.docsLink) {
+  if (error.humanReadable.docsLink) {
     lines.push("")
-    lines.push(`Learn more: ${error.docsLink}`)
+    lines.push(`Learn more: ${error.humanReadable.docsLink}`)
   }
 
+  // Error code (for debugging/Support)
+  lines.push("")
+  lines.push(`Error code: ${error.errorCode}`)
+
   return lines.join("\n")
+}
+
+/**
+ * Get severity indicator for display
+ */
+function getSeverityIndicator(severity: ErrorSeverity): string {
+  const indicators: Record<ErrorSeverity, string> = {
+    fatal: "🔴",
+    error: "❌",
+    warning: "⚠️",
+    info: "ℹ️",
+  }
+  return indicators[severity] || ""
 }
 
 /**
@@ -133,13 +295,18 @@ function getCategoryEmoji(category: ErrorCategory): string {
 /**
  * Parse Plaid error codes and create user-friendly errors
  */
-export function parsePlaidError(error: {
-  error_code?: string
-  error_message?: string
-  error_type?: string
-  display_message?: string
-  request_id?: string
-}): UserError {
+export function parsePlaidError(
+  error: {
+    error_code?: string
+    error_message?: string
+    error_type?: string
+    display_message?: string
+    request_id?: string
+    item_id?: string
+    institution_id?: string
+  },
+  accountId?: string,
+): UserError {
   const errorCode = error.error_code || "UNKNOWN"
   const errorMessage =
     error.error_message || error.display_message || "An error occurred"
@@ -151,15 +318,30 @@ export function parsePlaidError(error: {
     error.error_type === "ITEM_LOGIN_REQUIRED"
   ) {
     return createUserError(
+      ERROR_CODES.PLAID_ITEM_LOGIN_REQUIRED,
       ErrorCategory.PLAID_AUTH,
-      "Account Re-Authentication Required",
-      "Your bank account requires re-authentication. This happens when your bank credentials have changed or expired.",
+      "error",
+      true,
+      {
+        title: "Account Re-Authentication Required",
+        message:
+          "Your bank account requires re-authentication. This happens when your bank credentials have changed or expired.",
+        suggestions: [
+          "Re-authenticate via your adapter's setup command",
+          "This will open a secure browser window where you can log into your bank",
+          "After re-authentication, your transactions will sync normally",
+        ],
+        docsLink: "https://plaid.com/docs/errors/#item-login-required",
+      },
       [
-        "Re-authenticate via your adapter's setup command",
-        "This will open a secure browser window where you can log into your bank",
-        "After re-authentication, your transactions will sync normally",
+        {
+          type: "oauth_reauth",
+          tool: "plaid_oauth",
+          params: { accountId, item_id: error.item_id },
+          description: "Trigger OAuth re-authentication flow",
+        },
       ],
-      "https://plaid.com/docs/errors/#item-login-required",
+      { accountId, itemId: error.item_id, institutionId: error.institution_id },
     )
   }
 
@@ -169,170 +351,332 @@ export function parsePlaidError(error: {
     error.error_type === "INVALID_ACCESS_TOKEN"
   ) {
     return createUserError(
+      ERROR_CODES.PLAID_INVALID_ACCESS_TOKEN,
       ErrorCategory.PLAID_AUTH,
-      "Invalid Access Token",
-      "Your access token is invalid. This can happen if the token was revoked or corrupted.",
+      "error",
+      true,
+      {
+        title: "Invalid Access Token",
+        message:
+          "Your access token is invalid. This can happen if the token was revoked or corrupted.",
+        suggestions: [
+          "Run your adapter's setup command to reconnect your account",
+          "If this persists, remove and re-add the account",
+        ],
+        docsLink: "https://plaid.com/docs/errors/#invalid-access-token",
+      },
       [
-        "Run your adapter's setup command to reconnect your account",
-        "If this persists, remove and re-add the account",
+        {
+          type: "oauth_reauth",
+          tool: "plaid_oauth",
+          params: { accountId },
+          description: "Re-authenticate to get a new access token",
+        },
       ],
-      "https://plaid.com/docs/errors/#invalid-access-token",
+      { accountId, itemId: error.item_id },
     )
   }
 
   // Product not ready
   if (errorCode === "PRODUCT_NOT_READY") {
     return createUserError(
+      ERROR_CODES.PLAID_PRODUCT_NOT_READY,
       ErrorCategory.PLAID_API,
-      "Account Not Ready",
-      "Your account is not fully set up yet. Plaid is still processing your account information.",
+      "warning",
+      true,
+      {
+        title: "Account Not Ready",
+        message:
+          "Your account is not fully set up yet. Plaid is still processing your account information.",
+        suggestions: [
+          "Wait a few minutes and try again",
+          "If this persists, contact Plaid support",
+        ],
+        docsLink: "https://plaid.com/docs/errors/#product-not-ready",
+      },
       [
-        "Wait a few minutes and try again",
-        "If this persists, contact Plaid support",
+        {
+          type: "retry",
+          delayMs: 60000,
+          description: "Retry after 1 minute",
+        },
       ],
-      "https://plaid.com/docs/errors/#product-not-ready",
+      { accountId, itemId: error.item_id },
     )
   }
 
   // Rate limit
   if (errorCode === "RATE_LIMIT_EXCEEDED") {
     return createUserError(
+      ERROR_CODES.PLAID_RATE_LIMIT_EXCEEDED,
       ErrorCategory.PLAID_API,
-      "API Rate Limit Exceeded",
-      "Too many requests have been made to the Plaid API. Please wait before trying again.",
+      "warning",
+      true,
+      {
+        title: "API Rate Limit Exceeded",
+        message:
+          "Too many requests have been made to the Plaid API. Please wait before trying again.",
+        suggestions: [
+          "Wait a few minutes before syncing again",
+          "Consider syncing less frequently (e.g., daily instead of hourly)",
+          "If you need higher rate limits, upgrade your Plaid plan",
+        ],
+        docsLink: "https://plaid.com/docs/errors/#rate-limit-exceeded",
+      },
       [
-        "Wait a few minutes before syncing again",
-        "Consider syncing less frequently (e.g., daily instead of hourly)",
-        "If you need higher rate limits, upgrade your Plaid plan",
+        {
+          type: "retry",
+          delayMs: 300000, // 5 minutes
+          description: "Retry after 5 minutes",
+        },
       ],
-      "https://plaid.com/docs/errors/#rate-limit-exceeded",
+      { accountId },
     )
   }
 
   // Institution down
   if (errorCode === "INSTITUTION_DOWN") {
     return createUserError(
+      ERROR_CODES.PLAID_INSTITUTION_DOWN,
       ErrorCategory.PLAID_API,
-      "Bank temporarily unavailable",
-      "Your bank's systems are temporarily down for maintenance.",
+      "warning",
+      true,
+      {
+        title: "Bank temporarily unavailable",
+        message:
+          "Your bank's systems are temporarily down for maintenance.",
+        suggestions: [
+          "Wait a few minutes and try again",
+          "Check your bank's website for service status updates",
+          "Your transactions will sync automatically once the bank is back online",
+        ],
+      },
       [
-        "Wait a few minutes and try again",
-        "Check your bank's website for service status updates",
-        "Your transactions will sync automatically once the bank is back online",
+        {
+          type: "retry",
+          delayMs: 300000, // 5 minutes
+          description: "Retry after 5 minutes",
+        },
       ],
-      undefined,
+      {
+        accountId,
+        institutionId: error.institution_id,
+      },
     )
   }
 
   // Invalid credentials
   if (errorCode === "INVALID_CREDENTIALS") {
     return createUserError(
+      ERROR_CODES.PLAID_INVALID_CREDENTIALS,
       ErrorCategory.PLAID_API,
-      "Invalid API Credentials",
-      "The Plaid API credentials configured are invalid.",
+      "error",
+      false,
+      {
+        title: "Invalid API Credentials",
+        message:
+          "The Plaid API credentials configured are invalid.",
+        suggestions: [
+          "Configure your Plaid client ID and secret",
+          "Verify your credentials at https://dashboard.plaid.com",
+        ],
+        docsLink: "https://dashboard.plaid.com",
+      },
       [
-        "Configure your Plaid client ID and secret",
-        "Verify your credentials at https://dashboard.plaid.com",
+        {
+          type: "config_change",
+          params: { setting: "plaid_credentials" },
+          description: "Update Plaid API credentials",
+        },
       ],
-      "https://dashboard.plaid.com",
+      {},
     )
   }
 
   // Generic Plaid error
   return createUserError(
+    ERROR_CODES.PLAID_API_ERROR,
     ErrorCategory.PLAID_API,
-    "Plaid API Error",
-    `${errorMessage}${requestId ? ` (Request ID: ${requestId})` : ""}`,
+    "error",
+    true,
+    {
+      title: "Plaid API Error",
+      message: `${errorMessage}${requestId ? ` (Request ID: ${requestId})` : ""}`,
+      suggestions: [
+        "Try again in a few minutes",
+        "Check Plaid status at https://status.plaid.com",
+      ],
+      docsLink: "https://plaid.com/docs/errors/",
+    },
     [
-      "Try again in a few minutes",
-      "Check Plaid status at https://status.plaid.com",
+      {
+        type: "retry",
+        delayMs: 60000,
+        description: "Retry after 1 minute",
+      },
     ],
-    "https://plaid.com/docs/errors/",
+    { accountId, itemId: error.item_id },
   )
 }
 
 /**
  * Parse Gmail API errors and create user-friendly errors
  */
-export function parseGmailError(error: {
-  code?: number
-  message?: string
-  status?: number
-}): UserError {
+export function parseGmailError(
+  error: {
+    code?: number
+    message?: string
+    status?: number
+  },
+  accountId?: string,
+): UserError {
   const statusCode = error.status || error.code || 0
 
   // Unauthorized
   if (statusCode === 401) {
     return createUserError(
+      ERROR_CODES.GMAIL_AUTH_FAILED,
       ErrorCategory.GMAIL_AUTH,
-      "Gmail Authentication Failed",
-      "Your Gmail access has expired or been revoked. You need to re-authenticate.",
+      "error",
+      true,
+      {
+        title: "Gmail Authentication Failed",
+        message:
+          "Your Gmail access has expired or been revoked. You need to re-authenticate.",
+        suggestions: [
+          "Re-authenticate with Gmail via your adapter's setup command",
+          "Make sure you grant read-only access to your Gmail",
+          "Check that Google Cloud OAuth credentials are valid",
+        ],
+        docsLink: "https://developers.google.com/gmail/api/auth",
+      },
       [
-        "Re-authenticate with Gmail via your adapter's setup command",
-        "Make sure you grant read-only access to your Gmail",
-        "Check that Google Cloud OAuth credentials are valid",
+        {
+          type: "oauth_reauth",
+          tool: "gmail_oauth",
+          params: { accountId },
+          description: "Re-authenticate with Gmail",
+        },
       ],
-      "https://developers.google.com/gmail/api/auth",
+      { accountId },
     )
   }
 
   // Forbidden
   if (statusCode === 403) {
     return createUserError(
+      ERROR_CODES.GMAIL_ACCESS_DENIED,
       ErrorCategory.GMAIL_API,
-      "Gmail Access Denied",
-      "Access to Gmail was denied. This usually means the OAuth token lacks the required permissions.",
+      "error",
+      false,
+      {
+        title: "Gmail Access Denied",
+        message:
+          "Access to Gmail was denied. This usually means the OAuth token lacks the required permissions.",
+        suggestions: [
+          "Make sure the Gmail API is enabled in Google Cloud Console",
+          "Verify that the OAuth consent screen includes 'gmail.readonly' scope",
+          "Re-authenticate to grant proper permissions",
+        ],
+        docsLink: "https://developers.google.com/gmail/api/auth",
+      },
       [
-        "Make sure the Gmail API is enabled in Google Cloud Console",
-        "Verify that the OAuth consent screen includes 'gmail.readonly' scope",
-        "Re-authenticate to grant proper permissions",
+        {
+          type: "oauth_reauth",
+          tool: "gmail_oauth",
+          params: { accountId },
+          description: "Re-authenticate with proper permissions",
+        },
       ],
-      "https://developers.google.com/gmail/api/auth",
+      { accountId },
     )
   }
 
   // Not found
   if (statusCode === 404) {
     return createUserError(
+      ERROR_CODES.GMAIL_API_NOT_FOUND,
       ErrorCategory.GMAIL_API,
-      "Gmail API Not Found",
-      "The Gmail API endpoint could not be found. This may be a configuration issue.",
+      "error",
+      false,
+      {
+        title: "Gmail API Not Found",
+        message:
+          "The Gmail API endpoint could not be found. This may be a configuration issue.",
+        suggestions: [
+          "Verify the Gmail API is enabled in your Google Cloud project",
+          "Check that the API name is correct: 'gmail.api'",
+          "Try re-enabling the Gmail API in Google Cloud Console",
+        ],
+        docsLink:
+          "https://console.cloud.google.com/apis/library/gmail-api",
+      },
       [
-        "Verify the Gmail API is enabled in your Google Cloud project",
-        "Check that the API name is correct: 'gmail.api'",
-        "Try re-enabling the Gmail API in Google Cloud Console",
+        {
+          type: "config_change",
+          params: { setting: "gmail_api_enabled" },
+          description: "Enable Gmail API in Google Cloud Console",
+        },
       ],
-      "https://console.cloud.google.com/apis/library/gmail-api",
+      {},
     )
   }
 
   // Rate limit
   if (statusCode === 429) {
     return createUserError(
+      ERROR_CODES.GMAIL_RATE_LIMIT_EXCEEDED,
       ErrorCategory.GMAIL_API,
-      "Gmail API Rate Limit Exceeded",
-      "Too many requests have been made to the Gmail API. You've hit the daily quota limit.",
+      "warning",
+      true,
+      {
+        title: "Gmail API Rate Limit Exceeded",
+        message:
+          "Too many requests have been made to the Gmail API. You've hit the daily quota limit.",
+        suggestions: [
+          "Wait until tomorrow when the quota resets",
+          "Reduce sync frequency to avoid hitting the limit",
+          "Consider using Gmail push notifications instead of polling",
+          "Free tier: 250 quota units/day",
+        ],
+        docsLink: "https://developers.google.com/gmail/api/v1/quota",
+      },
       [
-        "Wait until tomorrow when the quota resets",
-        "Reduce sync frequency to avoid hitting the limit",
-        "Consider using Gmail push notifications instead of polling",
-        "Free tier: 250 quota units/day",
+        {
+          type: "wait",
+          description: "Wait until quota resets (usually daily)",
+        },
       ],
-      "https://developers.google.com/gmail/api/v1/quota",
+      { accountId },
     )
   }
 
   // Generic Gmail error
   return createUserError(
+    ERROR_CODES.GMAIL_API_ERROR,
     ErrorCategory.GMAIL_API,
-    "Gmail API Error",
-    error.message || "An error occurred while communicating with Gmail",
+    "error",
+    true,
+    {
+      title: "Gmail API Error",
+      message:
+        error.message ||
+        "An error occurred while communicating with Gmail",
+      suggestions: [
+        "Check your internet connection",
+        "Verify Gmail API is enabled in Google Cloud Console",
+        "Try again in a few minutes",
+      ],
+      docsLink: "https://developers.google.com/gmail/api",
+    },
     [
-      "Check your internet connection",
-      "Verify Gmail API is enabled in Google Cloud Console",
-      "Try again in a few minutes",
+      {
+        type: "retry",
+        delayMs: 60000,
+        description: "Retry after 1 minute",
+      },
     ],
-    "https://developers.google.com/gmail/api",
+    { accountId },
   )
 }
 
@@ -348,61 +692,117 @@ export function parseNetworkError(error: Error): UserError {
     message.includes("connection refused")
   ) {
     return createUserError(
+      ERROR_CODES.NETWORK_CONNECTION_REFUSED,
       ErrorCategory.NETWORK,
-      "Connection Refused",
-      "Could not connect to the server. The service may be down or your network is blocking the connection.",
+      "error",
+      true,
+      {
+        title: "Connection Refused",
+        message:
+          "Could not connect to the server. The service may be down or your network is blocking the connection.",
+        suggestions: [
+          "Check your internet connection",
+          "Verify you're not behind a firewall or proxy",
+          "If using a VPN, try disconnecting it",
+          "Check if the service is temporarily down",
+        ],
+      },
       [
-        "Check your internet connection",
-        "Verify you're not behind a firewall or proxy",
-        "If using a VPN, try disconnecting it",
-        "Check if the service is temporarily down",
+        {
+          type: "retry",
+          delayMs: 30000,
+          description: "Retry after 30 seconds",
+        },
       ],
-      undefined,
+      {},
+      error,
     )
   }
 
   // Timeout
   if (message.includes("timeout") || message.includes("timed out")) {
     return createUserError(
+      ERROR_CODES.NETWORK_TIMEOUT,
       ErrorCategory.NETWORK,
-      "Request Timeout",
-      "The request took too long to complete. This could be due to slow network or server issues.",
+      "warning",
+      true,
+      {
+        title: "Request Timeout",
+        message:
+          "The request took too long to complete. This could be due to slow network or server issues.",
+        suggestions: [
+          "Check your internet connection speed",
+          "Try again in a few minutes",
+          "If syncing many transactions, consider reducing the date range",
+        ],
+      },
       [
-        "Check your internet connection speed",
-        "Try again in a few minutes",
-        "If syncing many transactions, consider reducing the date range",
+        {
+          type: "retry",
+          delayMs: 60000,
+          description: "Retry after 1 minute",
+        },
       ],
-      undefined,
+      {},
+      error,
     )
   }
 
   // DNS resolution failed
   if (message.includes("enotfound") || message.includes("getaddrinfo")) {
     return createUserError(
+      ERROR_CODES.NETWORK_DNS_FAILED,
       ErrorCategory.NETWORK,
-      "DNS Resolution Failed",
-      "Could not resolve the server address. This might be a DNS or network configuration issue.",
+      "error",
+      false,
+      {
+        title: "DNS Resolution Failed",
+        message:
+          "Could not resolve the server address. This might be a DNS or network configuration issue.",
+        suggestions: [
+          "Check your internet connection",
+          "Try switching to a different DNS server (e.g., 8.8.8.8)",
+          "Flush your DNS cache",
+          "If you're using a VPN, try disconnecting it",
+        ],
+      },
       [
-        "Check your internet connection",
-        "Try switching to a different DNS server (e.g., 8.8.8.8)",
-        "Flush your DNS cache",
-        "If you're using a VPN, try disconnecting it",
+        {
+          type: "manual_intervention",
+          description: "Manual network configuration may be required",
+        },
       ],
-      undefined,
+      {},
+      error,
     )
   }
 
   // Generic network error
   return createUserError(
+    ERROR_CODES.NETWORK_GENERIC,
     ErrorCategory.NETWORK,
-    "Network Error",
-    error.message || "An error occurred while communicating with the server",
+    "error",
+    true,
+    {
+      title: "Network Error",
+      message:
+        error.message ||
+        "An error occurred while communicating with the server",
+      suggestions: [
+        "Check your internet connection",
+        "Try again in a few minutes",
+        "If the problem persists, check your network settings",
+      ],
+    },
     [
-      "Check your internet connection",
-      "Try again in a few minutes",
-      "If the problem persists, check your network settings",
+      {
+        type: "retry",
+        delayMs: 60000,
+        description: "Retry after 1 minute",
+      },
     ],
-    undefined,
+    {},
+    error,
   )
 }
 
@@ -419,56 +819,110 @@ export function parseFileSystemError(
   // Permission denied
   if (code === "EACCES" || code === "EPERM") {
     return createUserError(
+      ERROR_CODES.FS_PERMISSION_DENIED,
       ErrorCategory.FILE_SYSTEM,
-      "Permission Denied",
-      `Cannot access ${filePath || "file or directory"}. You don't have the required permissions.`,
+      "error",
+      false,
+      {
+        title: "Permission Denied",
+        message: `Cannot access ${
+          filePath || "file or directory"
+        }. You don't have the required permissions.`,
+        suggestions: [
+          "Check file/directory permissions",
+          "Ensure the user has read/write access to the data directory",
+        ],
+      },
       [
-        "Check file/directory permissions",
-        "Ensure the user has read/write access to the data directory",
+        {
+          type: "manual_intervention",
+          description: "Fix file/directory permissions manually",
+        },
       ],
-      undefined,
+      { filePath },
+      error,
     )
   }
 
   // No space left
   if (code === "ENOSPC") {
     return createUserError(
+      ERROR_CODES.STORAGE_DISK_FULL,
       ErrorCategory.STORAGE,
-      "Disk Full",
-      "No space left on device. Cannot save transactions.",
+      "fatal",
+      false,
+      {
+        title: "Disk Full",
+        message:
+          "No space left on device. Cannot save transactions.",
+        suggestions: [
+          "Free up disk space by deleting unnecessary files",
+          "Consider moving the BillClaw data directory to a drive with more space",
+        ],
+      },
       [
-        "Free up disk space by deleting unnecessary files",
-        "Consider moving the BillClaw data directory to a drive with more space",
+        {
+          type: "manual_intervention",
+          description: "Free up disk space manually",
+        },
       ],
-      undefined,
+      {},
+      error,
     )
   }
 
   // Directory not found
   if (code === "ENOENT" && message.includes("no such file")) {
     return createUserError(
+      ERROR_CODES.FS_NOT_FOUND,
       ErrorCategory.FILE_SYSTEM,
-      "File or Directory Not Found",
-      `The file or directory ${filePath || ""} does not exist.`,
+      "error",
+      false,
+      {
+        title: "File or Directory Not Found",
+        message: `The file or directory ${filePath || ""} does not exist.`,
+        suggestions: [
+          "Run setup to initialize BillClaw",
+          "Verify the data directory path is correct",
+        ],
+      },
       [
-        "Run setup to initialize BillClaw",
-        "Verify the data directory path is correct",
+        {
+          type: "config_change",
+          params: { setting: "data_directory" },
+          description: "Update data directory path",
+        },
       ],
-      undefined,
+      { filePath },
+      error,
     )
   }
 
   // Generic file system error
   return createUserError(
+    ERROR_CODES.FS_GENERIC,
     ErrorCategory.FILE_SYSTEM,
-    "File System Error",
-    message || "An error occurred while accessing the file system",
+    "error",
+    true,
+    {
+      title: "File System Error",
+      message:
+        message ||
+        "An error occurred while accessing the file system",
+      suggestions: [
+        "Check file/directory permissions",
+        "Ensure the data directory exists and is writable",
+        "Try running setup to reinitialize",
+      ],
+    },
     [
-      "Check file/directory permissions",
-      "Ensure the data directory exists and is writable",
-      "Try running setup to reinitialize",
+      {
+        type: "manual_intervention",
+        description: "Manual intervention may be required",
+      },
     ],
-    undefined,
+    { filePath },
+    error,
   )
 }
 
@@ -480,7 +934,9 @@ export function isUserError(error: unknown): error is UserError {
     typeof error === "object" &&
     error !== null &&
     "type" in error &&
-    (error as UserError).type === "UserError"
+    (error as UserError).type === "UserError" &&
+    "errorCode" in error &&
+    "humanReadable" in error
   )
 }
 
@@ -493,17 +949,21 @@ export function logError(
   context?: Record<string, unknown>,
 ): void {
   const logData = {
-    timestamp: new Date().toISOString(),
+    timestamp: isUserError(error) ? error.timestamp : new Date().toISOString(),
+    errorCode: isUserError(error) ? error.errorCode : undefined,
     category: isUserError(error) ? error.category : ErrorCategory.UNKNOWN,
-    message: error.message,
+    severity: isUserError(error) ? error.severity : undefined,
+    recoverable: isUserError(error) ? error.recoverable : undefined,
+    message: isUserError(error) ? error.humanReadable.message : error.message,
+    entities: isUserError(error) ? error.entities : undefined,
     context,
   } as Record<string, unknown>
 
-  if (isUserError(error) && error.error) {
+  if (isUserError(error) && error.originalError) {
     logData.originalError = {
-      name: error.error.name,
-      message: error.error.message,
-      stack: error.error.stack,
+      name: error.originalError.name,
+      message: error.originalError.message,
+      stack: error.originalError.stack,
     }
   }
 

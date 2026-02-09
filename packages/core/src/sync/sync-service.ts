@@ -3,14 +3,15 @@
  */
 
 import type { AccountConfig } from "../models/config.js"
-import type { Logger } from "../errors/errors.js"
+import type { Logger, UserError } from "../errors/errors.js"
+import { parseNetworkError } from "../errors/errors.js"
 
 export interface SyncResult {
   accountId: string
   success: boolean
   transactionsAdded: number
   transactionsUpdated: number
-  errors?: string[]
+  errors?: UserError[]
 }
 
 export interface SyncServiceState {
@@ -109,12 +110,18 @@ async function syncAccount(
     return result
   } catch (error) {
     logger.error?.(`Error syncing ${accountId}:`, error)
+    // Convert error to UserError
+    const userError =
+      error instanceof Error
+        ? parseNetworkError(error)
+        : parseNetworkError(new Error(String(error)))
+
     return {
       accountId,
       success: false,
       transactionsAdded: 0,
       transactionsUpdated: 0,
-      errors: [error instanceof Error ? error.message : String(error)],
+      errors: [userError],
     }
   }
 }

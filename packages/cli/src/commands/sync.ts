@@ -8,6 +8,7 @@ import type { CliCommand, CliContext } from "./registry.js"
 import { Spinner } from "../utils/progress.js"
 import { success, error, formatStatus } from "../utils/format.js"
 import { Billclaw } from "@firela/billclaw-core"
+import { formatError } from "@firela/billclaw-core"
 
 /**
  * Run sync command
@@ -80,7 +81,10 @@ async function syncAllAccounts(billclaw: Billclaw): Promise<void> {
 
         for (const result of results) {
           if (result.errors) {
-            errors.push(...result.errors)
+            // Convert UserError[] to formatted strings for display
+            for (const userError of result.errors) {
+              errors.push(formatError(userError))
+            }
           }
         }
       } catch (err) {
@@ -145,11 +149,11 @@ async function syncSingleAccount(
 
     spinner.succeed(`Synced ${accountId}: +${added} new, ${updated} updated`)
 
-    const errors = results.flatMap((r) => r.errors || [])
-    if (errors.length > 0) {
+    const userErrors = results.flatMap((r) => r.errors || [])
+    if (userErrors.length > 0) {
       console.log("Errors:")
-      for (const err of errors) {
-        console.log(`  - ${err}`)
+      for (const userError of userErrors) {
+        console.log(`  - ${formatError(userError)}`)
       }
     }
   } catch (err) {

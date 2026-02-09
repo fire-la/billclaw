@@ -5,7 +5,7 @@
  * OAuth token management is provided by the adapter layer.
  */
 
-import type { Logger } from "../../errors/errors.js"
+import type { Logger, UserError } from "../../errors/errors.js"
 import type { StorageConfig } from "../../models/config.js"
 import type { Transaction } from "../../storage/transaction-storage.js"
 import { appendTransactions } from "../../storage/transaction-storage.js"
@@ -18,6 +18,7 @@ import {
   parseBillToTransaction,
   type ParsedTransaction,
 } from "./email-parser.js"
+import { createUserError, ERROR_CODES, parseGmailError, ErrorCategory } from "../../errors/errors.js"
 
 export interface GmailAccount {
   id: string
@@ -31,7 +32,7 @@ export interface GmailFetchResult {
   billsExtracted: number
   transactionsAdded: number
   transactionsUpdated: number
-  errors?: string[]
+  errors?: UserError[]
 }
 
 /**
@@ -328,6 +329,22 @@ export async function fetchGmailBills(
   accessToken?: string,
 ): Promise<GmailFetchResult> {
   if (!accessToken) {
+    const noTokenError: UserError = createUserError(
+      ERROR_CODES.GMAIL_AUTH_FAILED,
+      ErrorCategory.GMAIL_AUTH,
+      "error",
+      true,
+      {
+        title: "No OAuth Access Token Provided",
+        message: `No OAuth access token was provided for Gmail account ${account.id}.`,
+        suggestions: [
+          "Ensure an access token is provided when calling this function",
+          "Run OAuth setup to authenticate with Gmail",
+        ],
+      },
+      [{ type: "oauth_reauth", tool: "gmail_oauth", params: { accountId: account.id } }],
+      { accountId: account.id },
+    )
     return {
       success: false,
       accountId: account.id,
@@ -335,7 +352,7 @@ export async function fetchGmailBills(
       billsExtracted: 0,
       transactionsAdded: 0,
       transactionsUpdated: 0,
-      errors: ["No OAuth access token provided"],
+      errors: [noTokenError],
     }
   }
 
@@ -424,8 +441,31 @@ export async function fetchGmailBills(
       transactionsUpdated: storageResult.updated,
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Unknown error"
-    logger.error?.(`Gmail fetch failed: ${errorMsg}`)
+    logger.error?.(`Gmail fetch failed:`, error)
+
+    // Parse error to UserError
+    let userError: UserError
+    if (error instanceof Error) {
+      // Try to parse as Gmail error
+      try {
+        // Check if it's a fetch response with status
+        if ("status" in error) {
+          userError = parseGmailError(
+            { status: (error as any).status, message: error.message },
+            account.id,
+          )
+        } else {
+          // Generic error
+          userError = parseGmailError({ message: error.message }, account.id)
+        }
+      } catch {
+        // Fallback to network error
+        userError = parseGmailError({ message: error.message }, account.id)
+      }
+    } else {
+      userError = parseGmailError({ message: String(error) }, account.id)
+    }
+
     return {
       success: false,
       accountId: account.id,
@@ -433,7 +473,7 @@ export async function fetchGmailBills(
       billsExtracted: 0,
       transactionsAdded: 0,
       transactionsUpdated: 0,
-      errors: [errorMsg],
+      errors: [userError],
     }
   }
 }

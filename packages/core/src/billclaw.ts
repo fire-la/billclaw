@@ -6,7 +6,7 @@
  */
 
 import type { AccountConfig } from "./models/config.js"
-import type { Logger } from "./errors/errors.js"
+import type { Logger, UserError } from "./errors/errors.js"
 import type { RuntimeContext, ConfigProvider } from "./runtime/types.js"
 import type { Transaction, SyncState } from "./storage/transaction-storage.js"
 import type {
@@ -20,6 +20,7 @@ import type {
   GmailAccount,
 } from "./sources/gmail/gmail-fetch.js"
 import type { SyncResult } from "./sync/sync-service.js"
+import { createUserError, ERROR_CODES, ErrorCategory } from "./errors/errors.js"
 
 // Storage
 import {
@@ -137,12 +138,29 @@ export class Billclaw {
     const account = config.accounts.find((a) => a.id === accountId)
 
     if (!account) {
+      const notFoundError: UserError = createUserError(
+        ERROR_CODES.CONFIG_INVALID,
+        ErrorCategory.CONFIG,
+        "error",
+        false,
+        {
+          title: "Account Not Found",
+          message: `Account with ID "${accountId}" was not found in the configuration.`,
+          suggestions: [
+            "Verify the account ID is correct",
+            "Check that the account exists in your configuration",
+            "Run setup to add the account if needed",
+          ],
+        },
+        [],
+        { accountId },
+      )
       return {
         accountId,
         success: false,
         transactionsAdded: 0,
         transactionsUpdated: 0,
-        errors: [`Account not found: ${accountId}`],
+        errors: [notFoundError],
       }
     }
 
@@ -154,12 +172,28 @@ export class Billclaw {
         return await this.syncGmailAccount(account)
 
       default:
+        const unsupportedTypeError: UserError = createUserError(
+          ERROR_CODES.CONFIG_INVALID,
+          ErrorCategory.CONFIG,
+          "error",
+          false,
+          {
+            title: "Unsupported Account Type",
+            message: `Account type "${account.type}" is not supported.`,
+            suggestions: [
+              "Supported account types are: plaid, gmail",
+              "Update your configuration to use a supported account type",
+            ],
+          },
+          [],
+          { accountId },
+        )
         return {
           accountId,
           success: false,
           transactionsAdded: 0,
           transactionsUpdated: 0,
-          errors: [`Unsupported account type: ${account.type}`],
+          errors: [unsupportedTypeError],
         }
     }
   }
@@ -270,6 +304,22 @@ export class Billclaw {
         this.logger.warn?.(
           `No access token found for Gmail account ${account.id}. Please run OAuth setup first.`,
         )
+        const noTokenError: UserError = createUserError(
+          ERROR_CODES.GMAIL_AUTH_FAILED,
+          ErrorCategory.GMAIL_AUTH,
+          "error",
+          true,
+          {
+            title: "No OAuth Access Token Found",
+            message: `No OAuth access token was found for Gmail account ${account.id}.`,
+            suggestions: [
+              "Run OAuth setup first to authenticate with Gmail",
+              "Ensure the account is properly configured",
+            ],
+          },
+          [{ type: "oauth_reauth", tool: "gmail_oauth", params: { accountId: account.id } }],
+          { accountId: account.id },
+        )
         results.push({
           accountId: account.id,
           success: false,
@@ -277,7 +327,7 @@ export class Billclaw {
           billsExtracted: 0,
           transactionsAdded: 0,
           transactionsUpdated: 0,
-          errors: ["No OAuth access token found. Please run OAuth setup first."],
+          errors: [noTokenError],
         })
         continue
       }
@@ -287,6 +337,22 @@ export class Billclaw {
         this.logger.warn?.(
           `Access token expired for Gmail account ${account.id}. Please refresh the token.`,
         )
+        const tokenExpiredError: UserError = createUserError(
+          ERROR_CODES.GMAIL_AUTH_FAILED,
+          ErrorCategory.GMAIL_AUTH,
+          "error",
+          true,
+          {
+            title: "Gmail Access Token Expired",
+            message: `The access token for Gmail account ${account.id} has expired.`,
+            suggestions: [
+              "Refresh the token using OAuth refresh flow",
+              "Run setup again to re-authenticate with Gmail",
+            ],
+          },
+          [{ type: "oauth_reauth", tool: "gmail_oauth", params: { accountId: account.id } }],
+          { accountId: account.id },
+        )
         results.push({
           accountId: account.id,
           success: false,
@@ -294,9 +360,7 @@ export class Billclaw {
           billsExtracted: 0,
           transactionsAdded: 0,
           transactionsUpdated: 0,
-          errors: [
-            "Access token expired. Please refresh the token using OAuth refresh flow.",
-          ],
+          errors: [tokenExpiredError],
         })
         continue
       }
