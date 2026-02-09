@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- f46be36: Add BillClaw Connect OAuth server and webhook support
+
 ## 0.1.3
 
 ### Patch Changes
