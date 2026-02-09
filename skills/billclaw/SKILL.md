@@ -8,6 +8,26 @@ tags: [finance, banking, plaid, gocardless, gmail, beancount, ledger, transactio
 
 Complete financial data management for OpenClaw with local-first architecture. Sync bank transactions, fetch bills from email, and export to accounting formats.
 
+## Security & Privacy
+
+BillClaw is designed with **security-first architecture** to protect your sensitive financial data:
+
+- **Local-First Storage**: Your data never leaves your machine. All transactions are stored locally in `~/.billclaw/`
+- **System Keychain**: Sensitive tokens (Plaid access tokens, Gmail refresh tokens) are stored in your platform's secure keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- **No Cloud Dependency**: No external servers or databases. Your financial data stays under your control
+- **Audit Logging**: All credential operations are logged locally for complete transparency
+- **Open Source**: Fully auditable codebase at https://github.com/fire-la/billclaw
+- **Minimal Permissions**: Only accesses `~/.billclaw/` directory for data storage
+
+**Credential Storage Summary:**
+
+| Credential Type | Storage Location |
+|----------------|------------------|
+| Plaid API keys | `~/.billclaw/config.json` (user-provided) |
+| Plaid access tokens | System Keychain (encrypted) |
+| Gmail refresh tokens | System Keychain (encrypted) |
+| Transaction data | `~/.billclaw/transactions/` (local JSON) |
+
 ## What is BillClaw?
 
 BillClaw gives you **complete control over your financial data**:
@@ -26,7 +46,69 @@ Use this skill when:
 - Managing local transaction storage
 - Setting up bank account connections
 
-## Quick Start
+## Installation
+
+### For OpenClaw Users (Recommended)
+
+This skill is designed for OpenClaw. Install directly from ClawHub:
+
+```bash
+clawhub install billclaw
+```
+
+Once installed, you can use BillClaw tools and commands directly within OpenClaw without any additional installation.
+
+**No external packages required** - the skill includes all necessary functionality.
+
+### For Standalone CLI Users
+
+If you prefer to use BillClaw as a command-line tool outside of OpenClaw:
+
+```bash
+npm install -g @firela/billclaw-cli
+billclaw setup
+```
+
+The CLI package provides the same functionality as the OpenClaw skill, but through a terminal interface.
+
+## Quick Start (OpenClaw)
+
+### 1. Setup Your Accounts
+
+Use the setup command within OpenClaw:
+
+```
+/billclaw-setup
+```
+
+Interactive wizard will guide you through:
+- Connecting bank accounts (Plaid/GoCardless)
+- Configuring Gmail for bill fetching
+- Setting local storage location
+
+### 2. Sync Your Data
+
+```
+You: Sync my bank transactions for last month
+
+OpenClaw: [Uses plaid_sync tool]
+✓ Synced 127 transactions from checking account
+```
+
+Or use the command directly:
+```
+/billclaw-sync --from 2024-01-01 --to 2024-12-31
+```
+
+### 3. Export to Accounting Formats
+
+```
+/billclaw-export --format beancount --output 2024.beancount
+```
+
+## Quick Start (CLI)
+
+If using the standalone CLI:
 
 ### 1. Install BillClaw CLI
 
@@ -39,11 +121,6 @@ npm install -g @firela/billclaw-cli
 ```bash
 billclaw setup
 ```
-
-Interactive wizard will guide you through:
-- Connecting bank accounts (Plaid/GoCardless)
-- Configuring Gmail for bill fetching
-- Setting local storage location
 
 ### 3. Sync Your Data
 
@@ -282,5 +359,14 @@ billclaw export --format beancount --show-mappings
 
 - **Documentation**: https://github.com/fire-la/billclaw
 - **Issues**: https://github.com/fire-la/billclaw/issues
+- **Security**: Report security vulnerabilities privately at security@fire-la.dev
 - **npm packages**: https://www.npmjs.com/org/firela
+
+## Security Disclosure
+
+BillClaw is an open-source project. You can review the complete source code at:
+- **Repository**: https://github.com/fire-la/billclaw
+- **License**: MIT
+
+For security researchers: If you discover a security vulnerability, please disclose it responsibly by emailing security@fire-la.dev before public disclosure.
 
