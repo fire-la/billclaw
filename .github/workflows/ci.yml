@@ -4,6 +4,14 @@ name: CI
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - "docs/**"
+      - "billclaw-docs/**"
+      - ".claude/**"
+      - "CLAUDE.md"
+      - "**.md"
+      - ".gitignore"
+      - ".gitmodules"
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
