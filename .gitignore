@@ -41,3 +41,8 @@ tmp
 
 # ClawHub
 .clawhub/
+
+# Documentation submodule (managed separately)
+billclaw-docs
+.claude
+CLAUDE.md
