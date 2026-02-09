@@ -284,12 +284,3 @@ billclaw export --format beancount --show-mappings
 - **Issues**: https://github.com/fire-la/billclaw/issues
 - **npm packages**: https://www.npmjs.com/org/firela
 
-## Version
-
-Current version: 0.1.5 (2026-02-08)
-
-Recent updates:
-- Unified configuration management
-- Connect OAuth service
-- HTTPS/TLS support for production
-- Improved CLI integration
