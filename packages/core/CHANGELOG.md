@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- 0080d71: Add OpenClaw skill metadata for ClawHub security compliance:
+  - Declare required credentials (PLAID_CLIENT_ID, PLAID_SECRET, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET)
+  - Set disable-model-invocation for sensitive financial data handling
+  - Add optional install specs for CLI and Connect components
+  - Update documentation to clarify plugin-based architecture
+
+### Patch Changes
+
+- 1bf6e7d: Version bump to 0.5.1
+
 ## 0.4.0
 
 ### Minor Changes
