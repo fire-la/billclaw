@@ -17,11 +17,17 @@ metadata:
         "install":
           [
             {
-              "id": "npm",
+              "id": "openclaw",
+              "kind": "node",
+              "package": "@firela/billclaw-openclaw",
+              "label": "Install BillClaw OpenClaw plugin (required)",
+            },
+            {
+              "id": "cli",
               "kind": "node",
               "package": "@firela/billclaw-cli",
               "bins": ["billclaw"],
-              "label": "Install BillClaw CLI (npm)",
+              "label": "Install BillClaw CLI (optional)",
               "condition": "optional",
             },
             {
@@ -45,17 +51,17 @@ Complete financial data management for OpenClaw with local-first architecture. S
 
 **BillClaw is safe, open-source software designed with security-first principles.**
 
-- **No external code execution**: This skill provides documentation only. All npm packages referenced are separately published, verified, and available on npmjs.com for your review
+- **Transparent packages**: This skill provides installation instructions. All npm packages referenced (`@firela/billclaw-openclaw`, `@firela/billclaw-cli`, `@firela/billclaw-connect`) are separately published, verified, and available on npmjs.com for your review
 - **Local-first architecture**: Your financial data never leaves your machine. All transactions are stored locally in `~/.billclaw/`
 - **Transparent credentials**: You provide and control all API credentials (Plaid, Gmail) through your own accounts
 - **System keychain storage**: Sensitive tokens are encrypted in your platform's secure keychain
 - **No autonomous invocation**: This skill requires explicit user invocation (`disable-model-invocation: true`)
 - **Fully auditable**: All source code is available at https://github.com/fire-la/billclaw under MIT license
 
-**Verification:** All referenced packages are published on npm by the official maintainers:
-- `@firela/billclaw-openclaw` - OpenClaw plugin
-- `@firela/billclaw-cli` - Standalone CLI (optional)
-- `@firela/billclaw-connect` - OAuth server (optional)
+**Package Overview:**
+- `@firela/billclaw-openclaw` - **Required** - OpenClaw plugin that provides tools and commands
+- `@firela/billclaw-cli` - **Optional** - Standalone CLI for terminal usage
+- `@firela/billclaw-connect` - **Optional** - OAuth server for self-hosted authentication
 
 ## Required Credentials
 
