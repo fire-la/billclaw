@@ -17,7 +17,7 @@ import {
 } from "./transaction-storage"
 
 // Mock logger
-const mockLogger = {
+const _mockLogger = {
   info: vi.fn(),
   error: vi.fn(),
   warn: vi.fn(),

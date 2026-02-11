@@ -25,7 +25,7 @@ export async function initKeytar(): Promise<void> {
   if (!keytarModule) {
     try {
       keytarModule = await import("keytar")
-    } catch (error) {
+    } catch {
       throw new Error(
         "keytar is not installed. Install it with: npm install keytar",
       )

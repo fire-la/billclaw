@@ -6,7 +6,6 @@
 
 import type { CliCommand, CliContext } from "./registry.js"
 import { Spinner } from "../utils/progress.js"
-import { success, error } from "../utils/format.js"
 import {
   Billclaw,
   exportToBeancount,

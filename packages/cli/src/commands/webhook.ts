@@ -5,7 +5,6 @@
  */
 
 import type { CliCommand, CliContext } from "./registry.js"
-import { Billclaw } from "@firela/billclaw-core"
 import { emitWebhookTest } from "@firela/billclaw-core"
 import { success, error } from "../utils/format.js"
 

@@ -114,7 +114,6 @@ describe("CliLogger", () => {
 
   describe("log level filtering", () => {
     let logger: CliLogger
-    let infoCalls: string[] = []
     let originalInfo: typeof console.log
 
     beforeEach(() => {
@@ -123,8 +122,6 @@ describe("CliLogger", () => {
       originalInfo = console.log
       console.log = () => {}
       console.error = () => {}
-
-      infoCalls = []
     })
 
     afterEach(() => {

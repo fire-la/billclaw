@@ -190,7 +190,7 @@ async function runStatus(context: CliContext): Promise<void> {
 
     totalTransactions += stats.totalTransactions
     const sizeBytes = parseFloat(stats.storageSize)
-    const unit = stats.storageSize.split(" ")[1]
+    const _unit = stats.storageSize.split(" ")[1]
     totalSize += sizeBytes
   }
 

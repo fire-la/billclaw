@@ -6,7 +6,7 @@
 
 import type { CliCommand, CliContext } from "./registry.js"
 import { Spinner } from "../utils/progress.js"
-import { success, error, formatStatus } from "../utils/format.js"
+import { success, formatStatus } from "../utils/format.js"
 import { Billclaw } from "@firela/billclaw-core"
 import { formatError } from "@firela/billclaw-core"
 

@@ -22,7 +22,7 @@ async function initLockfile(): Promise<typeof import("proper-lockfile")> {
   if (!lockfileModule) {
     try {
       lockfileModule = await import("proper-lockfile")
-    } catch (error) {
+    } catch {
       throw new Error(
         "proper-lockfile is not installed. Install it with: npm install proper-lockfile",
       )

@@ -190,7 +190,7 @@ export function buildWebhookReceiverConfig(
       config.relay = {
         enabled: true,
         ...getRelayConfigDefaults(),
-        ...(options?.relayOverrides ?? {}),
+        ...(options?.relayOverrides),
         // Preserve credentials if they exist
         webhookId: existingRelay?.webhookId,
         apiKey: existingRelay?.apiKey,

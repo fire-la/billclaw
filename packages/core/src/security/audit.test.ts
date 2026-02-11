@@ -10,7 +10,6 @@ import {
   AuditLogger,
   AuditEventType,
   AuditSeverity,
-  type AuditEvent,
 } from "./audit"
 
 // Mock logger

@@ -2,13 +2,12 @@
  * ConfigManager unit tests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs/promises"
 import * as os from "node:os"
 import * as path from "node:path"
 import {
   ConfigManager,
-  type ConfigManagerOptions,
 } from "./config-manager.js"
 import { loadEnvOverrides, getEnvValue } from "./env-loader.js"
 

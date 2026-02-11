@@ -4,7 +4,7 @@
  * Tests for webhook_status and webhook_connect tools
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { webhookStatusTool, webhookConnectTool } from "./index.js"
 import type { OpenClawPluginApi } from "../types/openclaw-plugin.js"
 
@@ -216,7 +216,7 @@ describe("webhook tool result format", () => {
       expect(statusResult.content[0]).toHaveProperty("type")
       expect(statusResult.content[0]).toHaveProperty("text")
       expect(statusResult.content[0].type).toBe("text")
-    } catch (error) {
+    } catch {
       // Expected without proper config
     }
   })
@@ -228,7 +228,7 @@ describe("webhook tool result format", () => {
       const connectResult = await webhookConnectTool.execute(mockApi, { mode: "polling" })
       expect(typeof connectResult.content[0].text).toBe("string")
       expect(connectResult.content[0].text.length).toBeGreaterThan(0)
-    } catch (error) {
+    } catch {
       // Expected without proper config
     }
   })
@@ -241,7 +241,7 @@ describe("webhook tool result format", () => {
       const text = statusResult.content[0].text
       // Should contain status indicators
       expect(text).toMatch(/[✅⚠️❌]/)
-    } catch (error) {
+    } catch {
       // Expected without proper config
     }
   })

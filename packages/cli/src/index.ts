@@ -30,7 +30,7 @@ export async function createProgram(): Promise<Command> {
 
   // Register all commands
   for (const commandLoader of allCommands) {
-    const commandName = Object.keys(commandLoader)[0]
+    const _commandName = Object.keys(commandLoader)[0]
     const loadCommand = Object.values(commandLoader)[0] as () => Promise<any>
     const command = await loadCommand()
     registry.register(command)

@@ -5,7 +5,6 @@
  */
 
 import { Command } from "commander"
-import type { RuntimeContext } from "@firela/billclaw-core"
 import type { CliRuntimeContext } from "../runtime/context.js"
 
 /**

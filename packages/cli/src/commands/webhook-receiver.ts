@@ -8,7 +8,6 @@ import type { CliCommand, CliContext } from "./registry.js"
 import { success, error } from "../utils/format.js"
 import type { InboundWebhookMode } from "@firela/billclaw-core"
 import {
-  parseRelayError,
   parseWebhookError,
   logError,
   formatError,
@@ -19,7 +18,7 @@ import {
  */
 async function runConfig(
   context: CliContext,
-  args?: Record<string, unknown>,
+  _args?: Record<string, unknown>,
 ): Promise<void> {
   const { runtime } = context
   const config = await runtime.config.getConfig()
@@ -72,7 +71,7 @@ async function runConfig(
  */
 async function runStatus(
   context: CliContext,
-  args?: Record<string, unknown>,
+  _args?: Record<string, unknown>,
 ): Promise<void> {
   const { runtime } = context
   const config = await runtime.config.getConfig()
@@ -191,7 +190,7 @@ async function runEnable(
  */
 async function runDisable(
   context: CliContext,
-  args?: Record<string, unknown>,
+  _args?: Record<string, unknown>,
 ): Promise<void> {
   const { runtime } = context
   const config = await runtime.config.getConfig()

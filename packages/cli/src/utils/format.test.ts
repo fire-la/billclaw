@@ -5,7 +5,6 @@
 import { describe, it, expect } from "vitest"
 import {
   createTable,
-  printTable,
   formatStatus,
   formatAccountType,
   formatCurrency,

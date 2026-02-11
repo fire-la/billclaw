@@ -13,7 +13,6 @@ import {
   getStorageDir,
 } from "@firela/billclaw-core"
 import {
-  parseRelayError,
   parseWebhookError,
   logError,
   formatError,

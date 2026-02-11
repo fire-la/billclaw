@@ -7,7 +7,6 @@ import {
   AccountTypeSchema,
   AccountConfigSchema,
   SyncFrequencySchema,
-  PlaidEnvironmentSchema,
   WebhookConfigSchema,
   StorageConfigSchema,
   SyncConfigSchema,
@@ -68,13 +67,13 @@ describe("AccountConfigSchema", () => {
   })
 
   it("should require id field", () => {
-    const { id, ...invalid } = validAccount
+    const { id: _id, ...invalid } = validAccount
     const result = AccountConfigSchema.safeParse(invalid)
     expect(result.success).toBe(false)
   })
 
   it("should require type field", () => {
-    const { type, ...invalid } = validAccount as any
+    const { type: _type, ...invalid } = validAccount as any
     const result = AccountConfigSchema.safeParse(invalid)
     expect(result.success).toBe(false)
   })

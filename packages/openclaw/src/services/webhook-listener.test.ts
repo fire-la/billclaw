@@ -114,7 +114,7 @@ describe("Webhook Listener Service", () => {
 
       try {
         await startWebhookListener(errorApi)
-      } catch (error) {
+      } catch {
         expect(errorApi.logger.error).toHaveBeenCalled()
       }
     })
@@ -132,9 +132,8 @@ describe("Webhook Listener Service", () => {
         expect(mockApi.logger.info).toHaveBeenCalledWith(
           expect.stringContaining("Stopping"),
         )
-      } catch (error) {
+      } catch {
         // May fail without proper setup
-        expect(error).toBeDefined()
       }
     })
 
@@ -164,9 +163,8 @@ describe("Webhook Listener Service", () => {
         expect(status.running).toBe(true)
         expect(status).toHaveProperty("mode")
         expect(status).toHaveProperty("connectionStatus")
-      } catch (error) {
+      } catch {
         // Expected to fail without proper setup
-        expect(error).toBeDefined()
       }
     })
   })
@@ -181,9 +179,8 @@ describe("Webhook Listener Service", () => {
         expect(mockApi.logger.info).toHaveBeenCalledWith(
           expect.stringContaining("Starting"),
         )
-      } catch (error) {
+      } catch {
         // Expected to fail without proper setup
-        expect(error).toBeDefined()
       }
     })
 
@@ -197,7 +194,7 @@ describe("Webhook Listener Service", () => {
 
         // Should be the same instance
         expect(status1.running).toBe(status2.running)
-      } catch (error) {
+      } catch {
         // Expected to fail without proper setup
         expect(error).toBeDefined()
       }
