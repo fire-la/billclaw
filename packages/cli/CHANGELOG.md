@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1
+
+### Patch Changes
+
+- Version bump to 0.5.1 for ClawHub security compliance release
+- Updated dependencies
+  - @firela/billclaw-core@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes

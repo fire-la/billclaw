@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+### Patch Changes
+
+- Version bump to 0.5.1 for ClawHub security compliance release
+
 ## 0.5.0
 
 ### Minor Changes
