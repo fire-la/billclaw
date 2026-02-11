@@ -2,6 +2,8 @@
 name: billclaw
 description: This skill should be used when managing financial data, syncing bank transactions via Plaid/GoCardless, fetching bills from Gmail, or exporting to Beancount/Ledger formats. Provides local-first data sovereignty for OpenClaw users.
 tags: [finance, banking, plaid, gocardless, gmail, beancount, ledger, transactions]
+metadata: {"openclaw":{"homepage":"https://github.com/fire-la/billclaw","emoji":"💰","requires":{"env":["PLAID_CLIENT_ID","PLAID_SECRET","GMAIL_CLIENT_ID","GMAIL_CLIENT_SECRET"],"anyBins":["node"]},"primaryEnv":"PLAID_CLIENT_ID","install":[{"id":"npm","kind":"node","package":"@firela/billclaw-cli","bins":["billclaw"],"label":"Install BillClaw CLI (npm)","condition":"optional"},{"id":"connect","kind":"node","package":"@firela/billclaw-connect","label":"Install BillClaw Connect OAuth server (optional)","condition":"optional"}]}}
+disable-model-invocation: true
 ---
 
 # BillClaw - Financial Data Management for OpenClaw
@@ -18,6 +20,22 @@ BillClaw is designed with **security-first architecture** to protect your sensit
 - **Audit Logging**: All credential operations are logged locally for complete transparency
 - **Open Source**: Fully auditable codebase at https://github.com/fire-la/billclaw
 - **Minimal Permissions**: Only accesses `~/.billclaw/` directory for data storage
+- **No Autonomous Invocation**: This skill requires explicit user invocation due to sensitive financial data handling
+
+### Required Credentials
+
+This skill requires the following credentials to function (configure via environment variables or `~/.billclaw/config.json`):
+
+| Environment Variable | Purpose | Required For |
+|---------------------|---------|--------------|
+| `PLAID_CLIENT_ID` | Plaid API client ID | Plaid bank sync |
+| `PLAID_SECRET` | Plaid API secret | Plaid bank sync |
+| `GMAIL_CLIENT_ID` | Gmail OAuth client ID | Gmail bill fetching |
+| `GMAIL_CLIENT_SECRET` | Gmail OAuth client secret | Gmail bill fetching |
+
+**Important**: These credentials are NOT provided by this skill. You must obtain them from:
+- **Plaid**: https://dashboard.plaid.com/
+- **Gmail**: https://console.cloud.google.com/apis/credentials
 
 **Credential Storage Summary:**
 
@@ -50,48 +68,74 @@ Use this skill when:
 
 ### For OpenClaw Users (Recommended)
 
-This skill is designed for OpenClaw. Install directly from ClawHub:
+This skill provides instructions for using BillClaw with OpenClaw. The main integration is through the **@firela/billclaw-openclaw** plugin package.
 
+**To use BillClaw with OpenClaw:**
+
+1. Install the OpenClaw plugin:
 ```bash
-clawhub install billclaw
+npm install @firela/billclaw-openclaw
 ```
 
-Once installed, you can use BillClaw tools and commands directly within OpenClaw without any additional installation.
+2. Configure the plugin in your OpenClaw setup (see Configuration section below)
 
-**No external packages required** - the skill includes all necessary functionality.
+3. The plugin registers these tools and commands with OpenClaw:
+   - Tools: `plaid_sync`, `gmail_fetch`, `conversational_sync`, `conversational_status`
+   - Commands: `/billclaw-setup`, `/billclaw-sync`, `/billclaw-status`, `/billclaw-config`
 
-### For Standalone CLI Users
+### Optional Standalone Components
 
-If you prefer to use BillClaw as a command-line tool outside of OpenClaw:
+For users who prefer command-line or self-hosted OAuth flows:
 
+**Standalone CLI:**
 ```bash
 npm install -g @firela/billclaw-cli
 billclaw setup
 ```
 
-The CLI package provides the same functionality as the OpenClaw skill, but through a terminal interface.
+**Connect OAuth Server** (for self-hosted bank authentication):
+```bash
+npm install @firela/billclaw-connect
+# Requires additional configuration (see Connect OAuth Service section)
+```
 
 ## Quick Start (OpenClaw)
 
+### Prerequisites
+
+Before using BillClaw, you must provide credentials for the services you want to use:
+
+| Service | Required Credentials |
+|---------|---------------------|
+| **Plaid** | PLAID_CLIENT_ID, PLAID_SECRET |
+| **Gmail** | GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET |
+
+These credentials can be provided via:
+1. Environment variables (recommended)
+2. Configuration file (`~/.billclaw/config.json`)
+3. OpenClaw config under `skills.entries.billclaw.env`
+
 ### 1. Setup Your Accounts
 
-Use the setup command within OpenClaw:
+The BillClaw OpenClaw plugin provides a setup command:
 
 ```
 /billclaw-setup
 ```
 
-Interactive wizard will guide you through:
+The interactive wizard will guide you through:
 - Connecting bank accounts (Plaid/GoCardless)
 - Configuring Gmail for bill fetching
 - Setting local storage location
 
 ### 2. Sync Your Data
 
+Once configured, you can sync data naturally:
+
 ```
 You: Sync my bank transactions for last month
 
-OpenClaw: [Uses plaid_sync tool]
+OpenClaw: [Uses plaid_sync tool from BillClaw plugin]
 ✓ Synced 127 transactions from checking account
 ```
 
@@ -174,16 +218,18 @@ billclaw export --from YYYY-MM-DD          # Export date range
 
 ## OpenClaw Integration
 
-When installed in OpenClaw, you get these tools:
+This skill provides instructions for using BillClaw with OpenClaw. The actual integration is provided by the **@firela/billclaw-openclaw** npm package, which registers the following tools and commands:
 
-### Agent Tools
+### Agent Tools (via Plugin)
+
+The plugin registers these tools for agent use:
 
 - `plaid_sync` - Sync bank transactions from Plaid
 - `gmail_fetch` - Fetch bills from Gmail
 - `conversational_sync` - Natural language sync interface
 - `conversational_status` - Check sync status
 
-### Commands
+### Commands (via Plugin)
 
 - `/billclaw-setup` - Configure accounts
 - `/billclaw-sync` - Sync transactions
@@ -195,24 +241,47 @@ When installed in OpenClaw, you get these tools:
 ```
 You: Sync my bank transactions for last month
 
-OpenClaw: [Uses plaid_sync tool]
+OpenClaw: [Uses plaid_sync tool from BillClaw plugin]
 ✓ Synced 127 transactions from checking account
 ```
 
-## Connect OAuth Service
+### Plugin Installation
 
-For secure bank authentication, BillClaw uses the Connect OAuth service.
-
-### Quick Start (Local Development)
+To use these tools and commands, install the BillClaw OpenClaw plugin:
 
 ```bash
-# 1. Start Connect service
-cd packages/connect
-pnpm build
-node dist/server.js
-# Visit http://localhost:4456
+npm install @firela/billclaw-openclaw
+```
 
-# 2. Configure ~/.billclaw/config.json
+Then configure the plugin in your OpenClaw setup with your credentials.
+
+## Connect OAuth Service (Optional)
+
+The Connect OAuth service is an **optional component** for users who prefer self-hosted OAuth flows instead of using the OpenClaw plugin's built-in OAuth providers.
+
+### What is Connect?
+
+Connect is a standalone Express server that provides:
+- OAuth web interface for Plaid and Gmail authentication
+- Webhook endpoints for receiving callbacks from external services
+- Rate limiting and security features
+
+### When to Use Connect
+
+- You want to run your own OAuth callback server
+- You need to handle webhooks from Plaid or GoCardless
+- You prefer self-hosted authentication over cloud services
+
+### Quick Start
+
+1. Install the Connect package:
+```bash
+npm install @firela/billclaw-connect
+```
+
+2. Configure and start the server:
+```bash
+# Configuration in ~/.billclaw/config.json
 {
   "version": 1,
   "connect": { "port": 4456, "host": "localhost" },
@@ -222,18 +291,18 @@ node dist/server.js
     "environment": "sandbox"
   }
 }
+
+# Start the server
+npx @firela/billclaw-connect
 ```
+
+3. Visit http://localhost:4456 for the OAuth interface
 
 ### Production Deployment
 
-For real bank authentication, you need an external URL:
+For production, configure a public URL and HTTPS:
 
-```bash
-# Using ngrok for testing
-ngrok http 4456
-# Add to config: "publicUrl": "https://abc123.ngrok.io"
-
-# Or deploy to VPS with HTTPS
+```json
 {
   "connect": {
     "publicUrl": "https://yourdomain.com",
