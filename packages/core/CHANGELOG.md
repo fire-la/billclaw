@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.4
+
+### Patch Changes
+
+- Fix SKILL.md inconsistencies for OpenClaw security compliance.
+
+  **Problem**: Security scan flagged two inconsistencies:
+
+  1. Package name mismatch between SKILL.md and registry metadata
+  2. Contradictory "No external code execution" statement
+
+  **Changes**:
+
+  1. Add @firela/billclaw-openclaw as primary (required) install entry
+  2. Update Security Guarantee to clarify:
+     - Skill provides installation instructions
+     - Code execution handled by installed npm packages
+     - All packages are transparent and auditable
+  3. Add Package Overview section labeling required vs optional
+
+  **Metadata updates**:
+
+  - install[0]: @firela/billclaw-openclaw (required)
+  - install[1]: @firela/billclaw-cli (optional)
+  - install[2]: @firela/billclaw-connect (optional)
+
 ## 0.5.3
 
 ### Patch Changes
