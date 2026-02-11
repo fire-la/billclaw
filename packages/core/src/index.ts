@@ -80,5 +80,11 @@ export * from "./services/index.js"
 // Webhooks (inbound webhook processing)
 export * from "./webhooks/index.js"
 
+// Webhook receiver (configuration and mode selection)
+export * from "./webhook/index.js"
+
+// Relay (WebSocket client for webhook relay service)
+export * from "./relay/index.js"
+
 // Version
 export const VERSION = "0.0.1" as const

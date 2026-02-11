@@ -14,9 +14,15 @@ import {
   conversationalSyncTool,
   conversationalStatusTool,
   conversationalHelpTool,
+  webhookStatusTool,
+  webhookConnectTool,
 } from "./tools/index.js"
 import { registerWebhookHandlers } from "./services/webhook-handler.js"
 import { runSetupWizard } from "./setup/index.js"
+import {
+  startWebhookListener,
+  stopWebhookListener,
+} from "./services/index.js"
 
 /**
  * BillClaw OpenClaw plugin
@@ -92,6 +98,30 @@ export default {
       parameters: conversationalHelpTool.parameters,
       execute: async (_toolCallId, params) => {
         return conversationalHelpTool.execute(api, params as never)
+      },
+    })
+
+    // ========================================================================
+    // Webhook Receiver Tools
+    // ========================================================================
+
+    api.registerTool({
+      name: webhookStatusTool.name,
+      label: webhookStatusTool.label,
+      description: webhookStatusTool.description,
+      parameters: webhookStatusTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return webhookStatusTool.execute(api, params as never)
+      },
+    })
+
+    api.registerTool({
+      name: webhookConnectTool.name,
+      label: webhookConnectTool.label,
+      description: webhookConnectTool.description,
+      parameters: webhookConnectTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return webhookConnectTool.execute(api, params as never)
       },
     })
 
@@ -239,6 +269,20 @@ export default {
       },
       stop: async () => {
         api.logger.info?.("billclaw: webhook handler stopped")
+      },
+    })
+
+    // ========================================================================
+    // Background Services (Webhook Listener)
+    // ========================================================================
+
+    api.registerService({
+      id: "billclaw-webhook-listener",
+      start: async () => {
+        await startWebhookListener(api)
+      },
+      stop: async () => {
+        await stopWebhookListener(api)
       },
     })
   },

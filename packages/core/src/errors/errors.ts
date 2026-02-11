@@ -30,6 +30,12 @@ export enum ErrorCategory {
   STORAGE = "storage",
   FILE_SYSTEM = "file_system",
 
+  // Relay errors (webhook relay service)
+  RELAY = "relay",
+
+  // Webhook errors (inbound webhook receiver)
+  WEBHOOK = "webhook",
+
   // General errors
   UNKNOWN = "unknown",
 }
@@ -85,6 +91,25 @@ export const ERROR_CODES = {
   CONFIG_INVALID: "CONFIG_INVALID",
   CONFIG_MISSING: "CONFIG_MISSING",
   CONFIG_PARSE_FAILED: "CONFIG_PARSE_FAILED",
+
+  // Relay errors
+  RELAY_OAUTH_FAILED: "RELAY_OAUTH_FAILED",
+  RELAY_CONNECTION_FAILED: "RELAY_CONNECTION_FAILED",
+  RELAY_AUTH_FAILED: "RELAY_AUTH_FAILED",
+  RELAY_WEBSOCKET_ERROR: "RELAY_WEBSOCKET_ERROR",
+  RELAY_HEARTBEAT_TIMEOUT: "RELAY_HEARTBEAT_TIMEOUT",
+  RELAY_RECONNECT_FAILED: "RELAY_RECONNECT_FAILED",
+  RELAY_API_ERROR: "RELAY_API_ERROR",
+
+  // Webhook errors
+  WEBHOOK_START_FAILED: "WEBHOOK_START_FAILED",
+  WEBHOOK_STOP_FAILED: "WEBHOOK_STOP_FAILED",
+  WEBHOOK_CONFIG_INVALID: "WEBHOOK_CONFIG_INVALID",
+  WEBHOOK_MODE_SWITCH_FAILED: "WEBHOOK_MODE_SWITCH_FAILED",
+  WEBHOOK_RECEIVER_NOT_CONFIGURED: "WEBHOOK_RECEIVER_NOT_CONFIGURED",
+  WEBHOOK_HEALTH_CHECK_FAILED: "WEBHOOK_HEALTH_CHECK_FAILED",
+  WEBHOOK_DIRECT_UNAVAILABLE: "WEBHOOK_DIRECT_UNAVAILABLE",
+  WEBHOOK_SETUP_FAILED: "WEBHOOK_SETUP_FAILED",
 
   // Generic
   UNKNOWN_ERROR: "UNKNOWN_ERROR",
@@ -184,6 +209,12 @@ export interface Logger {
   warn(...args: unknown[]): void
   debug(...args: unknown[]): void
 }
+
+/**
+ * Partial logger type for logError function
+ * Accepts both full Logger and partial logger implementations
+ */
+export type PartialLogger = Partial<Logger>
 
 /**
  * Create a user-friendly error with dual-mode support
@@ -287,6 +318,8 @@ function getCategoryEmoji(category: ErrorCategory): string {
     [ErrorCategory.GMAIL_AUTH]: "🔐",
     [ErrorCategory.STORAGE]: "💾",
     [ErrorCategory.FILE_SYSTEM]: "📁",
+    [ErrorCategory.RELAY]: "🔌",
+    [ErrorCategory.WEBHOOK]: "🪝",
     [ErrorCategory.UNKNOWN]: "❓",
   }
   return emojis[category] || "❓"
@@ -927,6 +960,565 @@ export function parseFileSystemError(
 }
 
 /**
+ * Parse Relay service errors (OAuth, WebSocket, API errors)
+ *
+ * @param error - Error from Relay service
+ * @param context - Additional context (relayUrl, webhookId, apiKey, mode)
+ * @returns UserError with appropriate relay error code
+ */
+export function parseRelayError(
+  error: Error | { code?: string; message?: string; statusCode?: number },
+  context?: {
+    relayUrl?: string
+    webhookId?: string
+    apiKey?: string
+    mode?: string
+  },
+): UserError {
+  const message = error.message || String(error)
+  const code = (error as any).code
+  const statusCode = (error as any).statusCode
+
+  // Convert context to ErrorEntities format
+  const entities: ErrorEntities = {}
+  if (context?.relayUrl) entities.relayUrl = context.relayUrl
+  if (context?.webhookId) entities.webhookId = context.webhookId
+  if (context?.apiKey) entities.apiKey = context.apiKey
+  if (context?.mode) entities.mode = context.mode
+
+  // OAuth authorization failed
+  if (
+    message.includes("authorization") ||
+    message.includes("OAuth") ||
+    statusCode === 401
+  ) {
+    return createUserError(
+      ERROR_CODES.RELAY_OAUTH_FAILED,
+      ErrorCategory.RELAY,
+      "error",
+      true,
+      {
+        title: "Relay OAuth Authorization Failed",
+        message:
+          "OAuth authorization with Firela Relay service failed. This is required for relay mode.",
+        suggestions: [
+          "Ensure you have a Firela account",
+          "Try running the OAuth authorization again",
+          "Check that the OAuth callback URL (localhost:34567) is accessible",
+          "Consider using direct or polling mode instead",
+        ],
+        docsLink: "https://github.com/fire-la/billclaw/blob/main/docs/user-guide.md#webhook-configuration",
+      },
+      [
+        {
+          type: "retry",
+          description: "Retry OAuth authorization",
+        },
+        {
+          type: "config_change",
+          params: { mode: "polling" },
+          description: "Switch to polling mode",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Authentication failed (invalid API key)
+  if (
+    message.includes("authentication") ||
+    message.includes("unauthorized") ||
+    message.includes("invalid") ||
+    code === "AUTH_FAILED" ||
+    statusCode === 403
+  ) {
+    return createUserError(
+      ERROR_CODES.RELAY_AUTH_FAILED,
+      ErrorCategory.RELAY,
+      "error",
+      true,
+      {
+        title: "Relay Authentication Failed",
+        message:
+          "Authentication with Firela Relay service failed. Your API key or credentials may be invalid.",
+        suggestions: [
+          "Re-run OAuth authorization to refresh credentials",
+          "Check that your Firela account is active",
+          "Verify the relay service URL is correct",
+        ],
+        docsLink: "https://github.com/fire-la/billclaw/blob/main/docs/user-guide.md#relay-mode-setup",
+      },
+      [
+        {
+          type: "oauth_reauth",
+          tool: "webhook_connect",
+          params: { mode: "relay" },
+          description: "Re-authenticate with relay service",
+        },
+      ],
+      context,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // WebSocket connection failed
+  if (
+    message.includes("WebSocket") ||
+    message.includes("ws connection") ||
+    message.includes("ECONNREFUSED") ||
+    code === "WS_ERROR" ||
+    code === "CONNECTION_FAILED"
+  ) {
+    return createUserError(
+      ERROR_CODES.RELAY_CONNECTION_FAILED,
+      ErrorCategory.RELAY,
+      "warning",
+      true,
+      {
+        title: "Relay Connection Failed",
+        message:
+          "Could not connect to Firela Relay WebSocket. The service may be unavailable or network issues may exist.",
+        suggestions: [
+          "Check your internet connection",
+          "Verify the relay service URL is correct",
+          "Check if the relay service is operational",
+          "Webhook receiver will fall back to polling mode",
+        ],
+      },
+      [
+        {
+          type: "retry",
+          delayMs: 5000,
+          description: "Retry connection in 5 seconds",
+        },
+        {
+          type: "config_change",
+          params: { mode: "polling" },
+          description: "Switch to polling mode",
+        },
+      ],
+      context,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // WebSocket error during operation
+  if (code === "WEBSOCKET_ERROR" || message.includes("WebSocket error")) {
+    return createUserError(
+      ERROR_CODES.RELAY_WEBSOCKET_ERROR,
+      ErrorCategory.RELAY,
+      "warning",
+      true,
+      {
+        title: "Relay WebSocket Error",
+        message:
+          "A WebSocket error occurred while communicating with the relay service.",
+        suggestions: [
+          "The connection will be automatically re-established",
+          "Check your network connection stability",
+          "Webhooks will be queued until connection is restored",
+        ],
+      },
+      [
+        {
+          type: "wait",
+          delayMs: 3000,
+          description: "Wait for automatic reconnection",
+        },
+      ],
+      context,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Heartbeat timeout
+  if (
+    message.includes("heartbeat") ||
+    message.includes("timeout") ||
+    code === "HEARTBEAT_TIMEOUT"
+  ) {
+    return createUserError(
+      ERROR_CODES.RELAY_HEARTBEAT_TIMEOUT,
+      ErrorCategory.RELAY,
+      "warning",
+      true,
+      {
+        title: "Relay Heartbeat Timeout",
+        message:
+          "No heartbeat received from relay service. Connection may be stale.",
+        suggestions: [
+          "The connection will be automatically re-established",
+          "Check your network connection",
+          "Verify the relay service is running",
+        ],
+      },
+      [
+        {
+          type: "wait",
+          delayMs: 3000,
+          description: "Wait for automatic reconnection",
+        },
+      ],
+      context,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Reconnect failed
+  if (
+    message.includes("reconnect") ||
+    message.includes("max reconnect") ||
+    code === "RECONNECT_FAILED"
+  ) {
+    return createUserError(
+      ERROR_CODES.RELAY_RECONNECT_FAILED,
+      ErrorCategory.RELAY,
+      "warning",
+      true,
+      {
+        title: "Relay Reconnection Failed",
+        message:
+          "Failed to reconnect to relay service after multiple attempts.",
+        suggestions: [
+          "Check your network connection",
+          "Verify the relay service is operational",
+          "Consider restarting the webhook receiver",
+          "Webhook receiver will fall back to polling mode",
+        ],
+      },
+      [
+        {
+          type: "retry",
+          delayMs: 10000,
+          description: "Retry reconnection in 10 seconds",
+        },
+        {
+          type: "config_change",
+          params: { mode: "polling" },
+          description: "Switch to polling mode",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Generic Relay API error
+  return createUserError(
+    ERROR_CODES.RELAY_API_ERROR,
+    ErrorCategory.RELAY,
+    "error",
+    true,
+    {
+      title: "Relay API Error",
+      message: `An error occurred while communicating with the relay service: ${message}`,
+      suggestions: [
+        "Check your network connection",
+        "Verify the relay service URL is correct",
+        "Try again later",
+      ],
+    },
+    [
+      {
+        type: "retry",
+        delayMs: 5000,
+        description: "Retry the operation",
+      },
+    ],
+    entities,
+    error instanceof Error ? error : undefined,
+  )
+}
+
+/**
+ * Parse webhook manager errors (start, stop, config, health check)
+ *
+ * @param error - Error from webhook manager
+ * @param context - Additional context (mode, port, publicUrl)
+ * @returns UserError with appropriate webhook error code
+ */
+export function parseWebhookError(
+  error: Error | { code?: string; message?: string },
+  context?: {
+    mode?: string
+    port?: number
+    publicUrl?: string
+  },
+): UserError {
+  const message = error.message || String(error)
+  const code = (error as any).code
+
+  // Convert context to ErrorEntities format (string values only)
+  const entities: ErrorEntities = {}
+  if (context?.mode) entities.mode = context.mode
+  if (context?.port !== undefined) entities.port = String(context.port)
+  if (context?.publicUrl) entities.publicUrl = context.publicUrl
+
+  // Start failed
+  if (
+    message.includes("start") ||
+    message.includes("listen") ||
+    code === "START_FAILED"
+  ) {
+    return createUserError(
+      ERROR_CODES.WEBHOOK_START_FAILED,
+      ErrorCategory.WEBHOOK,
+      "error",
+      true,
+      {
+        title: "Webhook Receiver Start Failed",
+        message:
+          "Failed to start the webhook receiver. The port may be in use or configuration may be invalid.",
+        suggestions: [
+          "Check if another service is using the configured port",
+          "Verify the webhook configuration is valid",
+          "Check system logs for more details",
+        ],
+      },
+      [
+        {
+          type: "config_change",
+          params: { setting: "connect.port" },
+          description: "Change the webhook port",
+        },
+        {
+          type: "retry",
+          description: "Retry starting the webhook receiver",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Stop failed
+  if (
+    message.includes("stop") ||
+    message.includes("shutdown") ||
+    code === "STOP_FAILED"
+  ) {
+    return createUserError(
+      ERROR_CODES.WEBHOOK_STOP_FAILED,
+      ErrorCategory.WEBHOOK,
+      "warning",
+      false,
+      {
+        title: "Webhook Receiver Stop Failed",
+        message: "Failed to gracefully stop the webhook receiver.",
+        suggestions: [
+          "The receiver may still be running in the background",
+          "You can force stop by killing the process",
+          "Check system logs for more details",
+        ],
+      },
+      [
+        {
+          type: "manual_intervention",
+          description: "Manual intervention may be required to stop the service",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Config invalid
+  if (
+    message.includes("config") ||
+    message.includes("invalid") ||
+    message.includes("validation") ||
+    code === "CONFIG_INVALID"
+  ) {
+    return createUserError(
+      ERROR_CODES.WEBHOOK_CONFIG_INVALID,
+      ErrorCategory.CONFIG,
+      "error",
+      true,
+      {
+        title: "Webhook Configuration Invalid",
+        message:
+          "The webhook configuration is invalid. Please check your settings.",
+        suggestions: [
+          "Verify the configuration format is correct",
+          "Check that required fields are present",
+          "Run setup wizard to reconfigure",
+        ],
+        docsLink: "https://github.com/fire-la/billclaw/blob/main/docs/user-guide.md#webhook-configuration",
+      },
+      [
+        {
+          type: "config_change",
+          description: "Fix the configuration",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Mode switch failed
+  if (
+    message.includes("mode") ||
+    message.includes("switch") ||
+    code === "MODE_SWITCH_FAILED"
+  ) {
+    return createUserError(
+      ERROR_CODES.WEBHOOK_MODE_SWITCH_FAILED,
+      ErrorCategory.WEBHOOK,
+      "warning",
+      true,
+      {
+        title: "Webhook Mode Switch Failed",
+        message:
+          "Failed to switch webhook receiver mode. The receiver may need to be restarted.",
+        suggestions: [
+          "Stop the receiver before switching modes",
+          "Verify the target mode configuration is valid",
+          "Check system logs for more details",
+        ],
+      },
+      [
+        {
+          type: "retry",
+          description: "Retry switching modes",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Receiver not configured
+  if (
+    message.includes("not configured") ||
+    message.includes("not enabled") ||
+    code === "NOT_CONFIGURED"
+  ) {
+    return createUserError(
+      ERROR_CODES.WEBHOOK_RECEIVER_NOT_CONFIGURED,
+      ErrorCategory.CONFIG,
+      "warning",
+      true,
+      {
+        title: "Webhook Receiver Not Configured",
+        message:
+          "The webhook receiver is not configured. Please run setup to enable it.",
+        suggestions: [
+          "Run 'bills setup' to configure the webhook receiver",
+          "Select a mode (auto, direct, relay, or polling)",
+        ],
+        docsLink: "https://github.com/fire-la/billclaw/blob/main/docs/user-guide.md#webhook-configuration",
+      },
+      [
+        {
+          type: "config_change",
+          description: "Run setup to configure webhook receiver",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Health check failed
+  if (
+    message.includes("health") ||
+    message.includes("unhealthy") ||
+    code === "HEALTH_CHECK_FAILED"
+  ) {
+    return createUserError(
+      ERROR_CODES.WEBHOOK_HEALTH_CHECK_FAILED,
+      ErrorCategory.WEBHOOK,
+      "warning",
+      true,
+      {
+        title: "Webhook Receiver Health Check Failed",
+        message:
+          "The webhook receiver health check indicates an issue with the service.",
+        suggestions: [
+          "Check the receiver status for more details",
+          "Verify the network connection",
+          "Try restarting the webhook receiver",
+        ],
+      },
+      [
+        {
+          type: "retry",
+          description: "Retry the health check",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Direct mode unavailable
+  if (
+    message.includes("public url") ||
+    message.includes("direct mode") ||
+    code === "DIRECT_UNAVAILABLE"
+  ) {
+    return createUserError(
+      ERROR_CODES.WEBHOOK_DIRECT_UNAVAILABLE,
+      ErrorCategory.WEBHOOK,
+      "warning",
+      true,
+      {
+        title: "Direct Mode Unavailable",
+        message:
+          "Direct webhook mode requires a public URL but none is configured or accessible.",
+        suggestions: [
+          "Configure a public URL in settings",
+          "Consider using relay mode instead",
+          "Use polling mode as a fallback",
+        ],
+        docsLink: "https://github.com/fire-la/billclaw/blob/main/docs/user-guide.md#webhook-modes",
+      },
+      [
+        {
+          type: "config_change",
+          params: { mode: "relay" },
+          description: "Switch to relay mode",
+        },
+        {
+          type: "config_change",
+          params: { mode: "polling" },
+          description: "Switch to polling mode",
+        },
+      ],
+      entities,
+      error instanceof Error ? error : undefined,
+    )
+  }
+
+  // Generic webhook setup failed
+  return createUserError(
+    ERROR_CODES.WEBHOOK_SETUP_FAILED,
+    ErrorCategory.WEBHOOK,
+    "error",
+    true,
+    {
+      title: "Webhook Setup Failed",
+      message: `Failed to setup webhook receiver: ${message}`,
+      suggestions: [
+        "Check the configuration is valid",
+        "Verify required services are available",
+        "Check system logs for more details",
+      ],
+    },
+    [
+      {
+        type: "retry",
+        description: "Retry webhook setup",
+      },
+    ],
+    entities,
+    error instanceof Error ? error : undefined,
+  )
+}
+
+/**
  * Type guard to check if error is a UserError
  */
 export function isUserError(error: unknown): error is UserError {
@@ -944,7 +1536,7 @@ export function isUserError(error: unknown): error is UserError {
  * Log error with context for debugging
  */
 export function logError(
-  logger: Logger | undefined,
+  logger: PartialLogger | undefined,
   error: UserError | Error,
   context?: Record<string, unknown>,
 ): void {
@@ -987,6 +1579,8 @@ export function getTroubleshootingUrl(category: ErrorCategory): string {
     [ErrorCategory.GMAIL_AUTH]: `${baseUrl}#credentials--authentication`,
     [ErrorCategory.STORAGE]: `${baseUrl}#storage-issues`,
     [ErrorCategory.FILE_SYSTEM]: `${baseUrl}#storage-issues`,
+    [ErrorCategory.RELAY]: `${baseUrl}#webhook-relay-issues`,
+    [ErrorCategory.WEBHOOK]: `${baseUrl}#webhook-relay-issues`,
   }
 
   return urls[category] || baseUrl

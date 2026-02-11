@@ -10,6 +10,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors/index.d.ts",
+      "import": "./dist/errors/index.js"
+    },
+    "./webhook": {
+      "types": "./dist/webhook/index.d.ts",
+      "import": "./dist/webhook/index.js"
+    },
+    "./relay": {
+      "types": "./dist/relay/index.d.ts",
+      "import": "./dist/relay/index.js"
     }
   },
   "files": [
@@ -48,6 +60,7 @@
   "devDependencies": {
     "@types/node": "^25.2.0",
     "@types/proper-lockfile": "^4.1.2",
+    "@types/ws": "^8.5.13",
     "@vitest/coverage-v8": "^4.0.18",
     "oxfmt": "^0.1.0",
     "oxlint": "^0.15.0",
@@ -60,6 +73,7 @@
   "dependencies": {
     "plaid": "^32.0.0",
     "proper-lockfile": "^4.1.2",
+    "ws": "^8.19.0",
     "zod": "^3.25.0"
   },
   "engines": {

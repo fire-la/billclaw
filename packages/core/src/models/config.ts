@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod"
+import { InboundWebhookReceiverConfigSchema } from "../webhook/config.js"
 
 /**
  * Account types supported by BillClaw
@@ -169,6 +170,10 @@ export const ConnectConfigSchema = z.object({
   /**
    * Public URL for external access (required for production OAuth callbacks)
    *
+   * Used for:
+   * - Production OAuth callbacks (Plaid, Gmail)
+   * - Direct mode webhook reception
+   *
    * Examples:
    * - https://billclaw.yourdomain.com
    * - https://abc123.ngrok.io (for tunneling)
@@ -187,6 +192,13 @@ export const ConnectConfigSchema = z.object({
     })
     .default({ enabled: false })
     .optional(),
+  /**
+   * Inbound webhook receiver configuration
+   *
+   * Unified webhook receiver supporting Direct/Relay/Polling modes for
+   * receiving real-time notifications from external services (Plaid, GoCardless, Gmail).
+   */
+  receiver: InboundWebhookReceiverConfigSchema.optional(),
 })
 export type ConnectConfig = z.infer<typeof ConnectConfigSchema>
 
@@ -225,6 +237,7 @@ export const BillclawConfigSchema = z.object({
   connect: ConnectConfigSchema.default({
     port: 4456,
     host: "localhost",
+    receiver: undefined,
   }),
 })
 export type BillclawConfig = z.infer<typeof BillclawConfigSchema>

@@ -20,6 +20,7 @@ import {
   setAccountFinder,
   createWebhookRoutes,
 } from "./routes/webhooks.js"
+import { createReceiverStatusRoutes } from "./routes/receiver-status.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -98,6 +99,10 @@ async function startServer() {
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", service: "billclaw-connect" })
   })
+
+  // Receiver status routes
+  const receiverStatusRoutes = await createReceiverStatusRoutes()
+  app.use("/receiver", receiverStatusRoutes)
 
   // OAuth routes
   app.use("/oauth/plaid", plaidRouter)

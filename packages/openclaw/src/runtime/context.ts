@@ -77,6 +77,33 @@ export class OpenClawConfigProvider implements ConfigProvider {
     const config = await this.getConfig()
     return config.accounts.find((a) => a.id === accountId) || null
   }
+
+  async updateConfig(updates: Partial<BillclawConfig>): Promise<void> {
+    // Deep merge for nested objects
+    this.cachedConfig = this.deepMerge(this.cachedConfig || {}, updates)
+    // Note: OpenClaw would need to persist this to its config
+    this.api.logger.info?.("Config updated:", updates)
+  }
+
+  private deepMerge(base: any, source: any): any {
+    const result = { ...base }
+    for (const key of Object.keys(source)) {
+      if (
+        source[key] !== null &&
+        typeof source[key] === "object" &&
+        !Array.isArray(source[key]) &&
+        key in result &&
+        result[key] !== null &&
+        typeof result[key] === "object" &&
+        !Array.isArray(result[key])
+      ) {
+        result[key] = this.deepMerge(result[key], source[key])
+      } else {
+        result[key] = source[key]
+      }
+    }
+    return result
+  }
 }
 
 /**

@@ -16,6 +16,12 @@ export { statusCommand } from "./status.js"
 export { configCommand } from "./config.js"
 export { exportCommand } from "./export.js"
 export { webhookTestCommand } from "./webhook.js"
+export {
+  webhookReceiverConfigCommand,
+  webhookReceiverStatusCommand,
+  webhookReceiverEnableCommand,
+  webhookReceiverDisableCommand,
+} from "./webhook-receiver.js"
 /**
  * All commands to register
  */
@@ -26,4 +32,8 @@ export const allCommands = [
   { config: () => import("./config.js").then((m) => m.configCommand) },
   { export: () => import("./export.js").then((m) => m.exportCommand) },
   { webhook: () => import("./webhook.js").then((m) => m.webhookTestCommand) },
+  { "webhook-receiver-config": () => import("./webhook-receiver.js").then((m) => m.webhookReceiverConfigCommand) },
+  { "webhook-receiver-status": () => import("./webhook-receiver.js").then((m) => m.webhookReceiverStatusCommand) },
+  { "webhook-receiver-enable": () => import("./webhook-receiver.js").then((m) => m.webhookReceiverEnableCommand) },
+  { "webhook-receiver-disable": () => import("./webhook-receiver.js").then((m) => m.webhookReceiverDisableCommand) },
 ]

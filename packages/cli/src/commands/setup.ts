@@ -12,6 +12,12 @@ import {
   writeAccountRegistry,
   getStorageDir,
 } from "@firela/billclaw-core"
+import {
+  parseRelayError,
+  parseWebhookError,
+  logError,
+  formatError,
+} from "@firela/billclaw-core/errors"
 import * as fs from "node:fs/promises"
 import * as path from "node:path"
 
@@ -19,7 +25,7 @@ import * as path from "node:path"
  * Account type prompt answers
  */
 interface AccountTypeAnswers {
-  accountType: "plaid" | "gmail" | "gocardless"
+  accountType: "plaid" | "gmail" | "gocardless" | "webhook"
 }
 
 /**
@@ -50,6 +56,15 @@ interface GoCardlessAnswers {
 }
 
 /**
+ * Webhook setup answers
+ */
+interface WebhookAnswers {
+  enableWebhook: boolean
+  mode: "auto" | "direct" | "relay" | "polling"
+  publicUrl?: string
+}
+
+/**
  * Run setup wizard
  */
 async function runSetup(context: CliContext): Promise<void> {
@@ -68,6 +83,7 @@ async function runSetup(context: CliContext): Promise<void> {
           name: "GoCardless (Bank accounts via open banking)",
           value: "gocardless",
         },
+        { name: "Webhook Receiver (Real-time notifications)", value: "webhook" },
       ],
     },
   ])
@@ -83,11 +99,14 @@ async function runSetup(context: CliContext): Promise<void> {
       case "gocardless":
         await setupGoCardless(context)
         break
+      case "webhook":
+        await setupWebhook(context)
+        break
     }
 
-    success("Account added successfully!")
+    success("Configuration completed successfully!")
   } catch (err) {
-    error("Failed to add account: " + (err as Error).message)
+    error("Failed to complete setup: " + (err as Error).message)
     throw err
   }
 }
@@ -295,6 +314,184 @@ async function setupGoCardless(context: CliContext): Promise<void> {
   )
 
   context.runtime.logger.info("GoCardless account configured:", accountId)
+}
+
+/**
+ * Setup webhook receiver
+ */
+async function setupWebhook(context: CliContext): Promise<void> {
+  console.log("")
+  console.log("Webhook Receiver Configuration")
+  console.log("==============================")
+  console.log("")
+  console.log("The webhook receiver enables real-time transaction updates from")
+  console.log("external services (Plaid, GoCardless, Gmail).")
+  console.log("")
+  console.log("Available modes:")
+  console.log("  • Auto    - Automatically detects the best mode")
+  console.log("  • Direct  - Receives webhooks directly (requires public URL)")
+  console.log("  • Relay   - Uses Firela Relay service (no public URL needed)")
+  console.log("  • Polling - Falls back to API polling")
+  console.log("")
+
+  const answers = await inquirer.prompt<WebhookAnswers>([
+    {
+      type: "confirm",
+      name: "enableWebhook",
+      message: "Enable webhook receiver for real-time updates?",
+      default: true,
+    },
+    {
+      type: "list",
+      name: "mode",
+      message: (answers) =>
+        answers.enableWebhook
+          ? "Select webhook receiver mode:"
+          : "Webhook receiver will be disabled. Press Enter to continue...",
+      choices: [
+        { name: "Auto (recommended) - Automatic mode selection", value: "auto" },
+        {
+          name: "Direct - For servers with public IP",
+          value: "direct",
+        },
+        {
+          name: "Relay - For home/office without public IP",
+          value: "relay",
+        },
+        {
+          name: "Polling - Fallback API polling mode",
+          value: "polling",
+        },
+      ],
+      default: "auto",
+      when: (answers) => answers.enableWebhook,
+    },
+    {
+      type: "input",
+      name: "publicUrl",
+      message: "Public URL for Direct mode (e.g., https://yourdomain.com):",
+      default: async () => {
+        try {
+          const config = await context.runtime.config.getConfig()
+          return config.connect?.publicUrl || ""
+        } catch {
+          return ""
+        }
+      },
+      when: (answers) => answers.enableWebhook && answers.mode === "direct",
+      validate: (input: string) => {
+        if (!input) return "Public URL is required for Direct mode"
+        try {
+          new URL(input)
+          return true
+        } catch {
+          return "Please enter a valid URL (e.g., https://yourdomain.com)"
+        }
+      },
+    },
+  ])
+
+  if (!answers.enableWebhook) {
+    console.log("")
+    console.log("Webhook receiver will remain disabled.")
+    console.log("You can enable it later by running: bills setup")
+    return
+  }
+
+  // Prepare configuration update
+  const configUpdate: any = {
+    connect: {
+      receiver: {
+        mode: answers.mode,
+      },
+    },
+  }
+
+  // Add public URL for direct mode
+  if (answers.mode === "direct" && answers.publicUrl) {
+    configUpdate.connect.publicUrl = answers.publicUrl
+  }
+
+  // Configure mode-specific settings using unified helper
+  const { setupWebhookReceiver } = await import("@firela/billclaw-core/webhook")
+
+  const setupResult = await setupWebhookReceiver(
+    answers.mode,
+    context.runtime,
+    {
+      publicUrl: answers.publicUrl,
+      oauthTimeout: 300000,
+    },
+  )
+
+  if (!setupResult.success) {
+    const userError =
+      setupResult.userError ??
+      parseWebhookError(
+        new Error(setupResult.error || "Setup failed"),
+        { mode: answers.mode },
+      )
+
+    logError(context.runtime.logger, userError, {
+      command: "setup",
+      mode: answers.mode,
+    })
+    error(formatError(userError))
+
+    // Fallback to polling mode on error
+    console.log("")
+    console.log("Falling back to polling mode...")
+    configUpdate.connect.receiver.mode = "polling"
+    configUpdate.connect.receiver.polling = { enabled: true, interval: 300000 }
+  } else {
+    // Merge the setup result into config update
+    Object.assign(configUpdate.connect.receiver, setupResult.config)
+
+    if (answers.mode === "relay") {
+      success("OAuth authorization completed successfully!")
+    }
+  }
+
+  // Save configuration
+  try {
+    const { updateConfig } = await import("@firela/billclaw-core")
+    await updateConfig(configUpdate)
+
+    console.log("")
+    success(`Webhook receiver configured in ${answers.mode} mode`)
+    console.log("")
+    console.log("Next steps:")
+
+    switch (answers.mode) {
+      case "direct":
+        console.log("  1. Ensure Connect service is running")
+        console.log(`  2. Configure webhooks to: ${answers.publicUrl}/webhook/plaid`)
+        break
+      case "relay":
+        console.log("  1. Webhook receiver is active via Firela Relay")
+        console.log("  2. Use 'bills webhook-receiver status' to verify connection")
+        break
+      case "polling":
+        console.log("  1. Webhooks will be fetched via API polling")
+        console.log(`  2. Polling interval: 5 minutes`)
+        break
+      case "auto":
+        console.log("  1. Webhook receiver will auto-detect optimal mode")
+        console.log("  2. Use 'bills webhook-receiver status' to check current mode")
+        break
+    }
+
+    context.runtime.logger.info("Webhook receiver configured")
+  } catch (err) {
+    const userError =
+      err instanceof Error && (err as any).type === "UserError"
+        ? (err as any)
+        : parseWebhookError(err as Error, { mode: answers.mode })
+
+    logError(context.runtime.logger, userError, { command: "setup", mode: answers.mode })
+    error(formatError(userError))
+    throw err
+  }
 }
 
 /**

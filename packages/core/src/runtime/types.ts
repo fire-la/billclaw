@@ -33,6 +33,14 @@ export interface ConfigProvider {
    * Get account configuration by ID
    */
   getAccount(accountId: string): Promise<any | null>
+
+  /**
+   * Update configuration
+   *
+   * Merges updates with existing config and saves atomically.
+   * This is needed for updating nested configuration like connect.receiver.relay credentials.
+   */
+  updateConfig(updates: Partial<BillclawConfig>): Promise<void>
 }
 
 /**
@@ -181,5 +189,30 @@ export class MemoryConfigProvider implements ConfigProvider {
 
   async getAccount(accountId: string): Promise<any | null> {
     return this.config.accounts.find((a) => a.id === accountId) || null
+  }
+
+  async updateConfig(updates: Partial<BillclawConfig>): Promise<void> {
+    // Deep merge for nested objects
+    this.config = this.deepMerge(this.config, updates)
+  }
+
+  private deepMerge(base: any, source: any): any {
+    const result = { ...base }
+    for (const key of Object.keys(source)) {
+      if (
+        source[key] !== null &&
+        typeof source[key] === "object" &&
+        !Array.isArray(source[key]) &&
+        key in result &&
+        result[key] !== null &&
+        typeof result[key] === "object" &&
+        !Array.isArray(result[key])
+      ) {
+        result[key] = this.deepMerge(result[key], source[key])
+      } else {
+        result[key] = source[key]
+      }
+    }
+    return result
   }
 }
