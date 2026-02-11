@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.2
+
+### Patch Changes
+
+- SKILL.md security optimization for VirusTotal compliance:
+  - Add prominent Security Guarantee section
+  - Remove direct npm install commands (use metadata instead)
+  - Emphasize all packages are verified npm packages
+  - Reference documentation for detailed setup
+  - Clarify skill is documentation-only
+
 ## 0.5.1
 
 ### Patch Changes
