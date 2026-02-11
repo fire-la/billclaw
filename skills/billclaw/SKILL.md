@@ -2,7 +2,38 @@
 name: billclaw
 description: This skill should be used when managing financial data, syncing bank transactions via Plaid/GoCardless, fetching bills from Gmail, or exporting to Beancount/Ledger formats. Provides local-first data sovereignty for OpenClaw users.
 tags: [finance, banking, plaid, gocardless, gmail, beancount, ledger, transactions]
-metadata: {"openclaw":{"homepage":"https://github.com/fire-la/billclaw","emoji":"💰","requires":{"env":["PLAID_CLIENT_ID","PLAID_SECRET","GMAIL_CLIENT_ID","GMAIL_CLIENT_SECRET"],"anyBins":["node"]},"primaryEnv":"PLAID_CLIENT_ID","install":[{"id":"npm","kind":"node","package":"@firela/billclaw-cli","bins":["billclaw"],"label":"Install BillClaw CLI (npm)","condition":"optional"},{"id":"connect","kind":"node","package":"@firela/billclaw-connect","label":"Install BillClaw Connect OAuth server (optional)","condition":"optional"}]}}
+homepage: https://github.com/fire-la/billclaw
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "💰",
+        "requires":
+          {
+            "env": ["PLAID_CLIENT_ID", "PLAID_SECRET", "GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET"],
+            "anyBins": ["node"],
+          },
+        "primaryEnv": "PLAID_CLIENT_ID",
+        "install":
+          [
+            {
+              "id": "npm",
+              "kind": "node",
+              "package": "@firela/billclaw-cli",
+              "bins": ["billclaw"],
+              "label": "Install BillClaw CLI (npm)",
+              "condition": "optional",
+            },
+            {
+              "id": "connect",
+              "kind": "node",
+              "package": "@firela/billclaw-connect",
+              "label": "Install BillClaw Connect OAuth server (optional)",
+              "condition": "optional",
+            },
+          ],
+      },
+  }
 disable-model-invocation: true
 ---
 
