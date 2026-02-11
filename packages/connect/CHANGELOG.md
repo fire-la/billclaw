@@ -1,5 +1,43 @@
 # @firela/billclaw-connect
 
+## 0.5.3
+
+### Patch Changes
+
+- Fix SKILL.md metadata format to match OpenClaw official standard.
+
+  Change metadata from single-line JSON string to multi-line YAML
+  nested JSON object format. This fixes ClawHub registry parsing issues
+  where metadata (requires.env, install specs) was not properly recognized.
+
+  **Before (single-line JSON):**
+
+  ```yaml
+  metadata: { "openclaw": { "requires": { "env": [...] } } }
+  ```
+
+  **After (multi-line YAML nested JSON):**
+
+  ```yaml
+  homepage: https://github.com/fire-la/billclaw
+  metadata:
+    {
+      "openclaw":
+        {
+          "emoji": "💰",
+          "requires": { "env": [...], "anyBins": [...] },
+          "primaryEnv": "PLAID_CLIENT_ID",
+          "install": [...],
+        },
+    }
+  ```
+
+  This matches the format used by official OpenClaw skills and ensures
+  proper parsing by ClawHub registry.
+
+- Updated dependencies
+  - @firela/billclaw-core@0.5.3
+
 ## 0.5.2
 
 ### Patch Changes
