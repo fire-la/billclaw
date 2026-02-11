@@ -102,7 +102,7 @@ async function runExport(
  */
 function getDefaultExportPath(format: string): string {
   const date = new Date().toISOString().split("T")[0]
-  return `~/.billclaw/exports/${format}-${date}.${
+  return `~/.firela/billclaw/exports/${format}-${date}.${
     format === "beancount" ? "beancount" : "ldg"
   }`
 }

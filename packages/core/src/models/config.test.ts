@@ -147,7 +147,7 @@ describe("WebhookConfigSchema", () => {
 
 describe("StorageConfigSchema", () => {
   const validStorage = {
-    path: "~/.billclaw",
+    path: "~/.firela/billclaw",
     format: "json" as const,
     encryption: { enabled: false },
   }
@@ -240,7 +240,7 @@ describe("BillclawConfigSchema", () => {
     accounts: [],
     webhooks: [],
     storage: {
-      path: "~/.billclaw",
+      path: "~/.firela/billclaw",
       format: "json",
       encryption: { enabled: false },
     },

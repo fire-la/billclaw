@@ -59,7 +59,7 @@ export interface GlobalCursor {
  * Get the base storage directory
  */
 export async function getStorageDir(config?: StorageConfig): Promise<string> {
-  const storagePath = config?.path || "~/.billclaw"
+  const storagePath = config?.path || "~/.firela/billclaw"
   const expandedPath = storagePath.replace(/^~/, os.homedir())
   return expandedPath
 }

@@ -97,7 +97,7 @@ export interface AuditConfig {
  * Default audit configuration
  */
 const DEFAULT_AUDIT_CONFIG: Required<AuditConfig> = {
-  dataDir: "~/.billclaw",
+  dataDir: "~/.firela/billclaw",
   maxEntries: 10000,
   retentionDays: 90,
 }

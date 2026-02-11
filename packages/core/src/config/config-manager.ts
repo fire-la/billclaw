@@ -61,7 +61,7 @@ interface CachedConfig {
  * Default config path
  */
 function getDefaultConfigPath(): string {
-  return path.join(os.homedir(), ".billclaw", "config.json")
+  return path.join(os.homedir(), ".firela", "billclaw", "config.json")
 }
 
 /**
@@ -346,7 +346,7 @@ export class ConfigManager implements ConfigProvider {
         environment: "sandbox",
       },
       storage: {
-        path: path.join(os.homedir(), ".billclaw"),
+        path: path.join(os.homedir(), ".firela", "billclaw"),
         format: "json",
         encryption: { enabled: false },
       },

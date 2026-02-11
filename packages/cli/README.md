@@ -134,14 +134,14 @@ billclaw import statement.ofx --account checking-123
 
 ## Configuration
 
-Configuration is stored in `~/.billclaw/config.json`:
+Configuration is stored in `~/.firela/billclaw/config.json`:
 
 ```json
 {
   "accounts": [],
   "webhooks": [],
   "storage": {
-    "path": "~/.billclaw",
+    "path": "~/.firela/billclaw",
     "format": "json",
     "encryption": { "enabled": false }
   },
@@ -158,10 +158,10 @@ Configuration is stored in `~/.billclaw/config.json`:
 
 ## Data Storage
 
-By default, data is stored in `~/.billclaw/`:
+By default, data is stored in `~/.firela/billclaw/`:
 
 ```
-~/.billclaw/
+~/.firela/billclaw/
 ├── config.json           # Configuration
 ├── data/                 # Transaction storage
 │   ├── transactions/     # Per-account transactions

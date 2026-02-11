@@ -26,7 +26,7 @@ async function runWebhookTest(
     if (webhooks.length === 0) {
       console.log("No webhooks configured.")
       console.log("To configure webhooks, add them to your config file:")
-      console.log("  ~/.billclaw/config.json")
+      console.log("  ~/.firela/billclaw/config.json")
       return
     }
 

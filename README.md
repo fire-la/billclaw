@@ -132,8 +132,8 @@ cd packages/connect
 pnpm build
 
 # 2. Create config directory and config file
-mkdir -p ~/.billclaw
-cat > ~/.billclaw/config.json << EOF
+mkdir -p ~/.firela/billclaw
+cat > ~/.firela/billclaw/config.json << EOF
 {
   "version": 1,
   "connect": {
@@ -202,7 +202,7 @@ ngrok http 4456
 # Output: https://abc123.ngrok.io
 
 # 4. Update config with public URL
-cat > ~/.billclaw/config.json << EOF
+cat > ~/.firela/billclaw/config.json << EOF
 {
   "version": 1,
   "connect": {
@@ -252,7 +252,7 @@ apt-get install -y certbot
 certbot certonly --standalone -d billclaw.yourdomain.com
 
 # 5. Configure production settings
-cat > ~/.billclaw/config.json << EOF
+cat > ~/.firela/billclaw/config.json << EOF
 {
   "version": 1,
   "connect": {

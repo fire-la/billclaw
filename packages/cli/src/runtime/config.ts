@@ -25,7 +25,7 @@ export interface CliConfigOptions {
  */
 function getDefaultConfigDir(): string {
   const home = os.homedir()
-  return path.join(home, ".billclaw")
+  return path.join(home, ".firela", "billclaw")
 }
 
 /**
@@ -55,7 +55,7 @@ export class CliConfigProvider implements ConfigProvider {
     const config = await this.getConfig()
     return (
       config.storage || {
-        path: "~/.billclaw",
+        path: "~/.firela/billclaw",
         format: "json",
         encryption: { enabled: false },
       }

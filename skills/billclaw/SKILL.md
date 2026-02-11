@@ -52,7 +52,7 @@ Complete financial data management for OpenClaw with local-first architecture. S
 **BillClaw is safe, open-source software designed with security-first principles.**
 
 - **Transparent packages**: This skill provides installation instructions. All npm packages referenced (`@firela/billclaw-openclaw`, `@firela/billclaw-cli`, `@firela/billclaw-connect`) are separately published, verified, and available on npmjs.com for your review
-- **Local-first architecture**: Your financial data never leaves your machine. All transactions are stored locally in `~/.billclaw/`
+- **Local-first architecture**: Your financial data never leaves your machine. All transactions are stored locally in `~/.firela/billclaw/`
 - **Transparent credentials**: You provide and control all API credentials (Plaid, Gmail) through your own accounts
 - **System keychain storage**: Sensitive tokens are encrypted in your platform's secure keychain
 - **No autonomous invocation**: This skill requires explicit user invocation (`disable-model-invocation: true`)
@@ -65,7 +65,7 @@ Complete financial data management for OpenClaw with local-first architecture. S
 
 ## Required Credentials
 
-This skill requires the following credentials to function (configure via environment variables or `~/.billclaw/config.json`):
+This skill requires the following credentials to function (configure via environment variables or `~/.firela/billclaw/config.json`):
 
 | Environment Variable | Purpose | Required For |
 |---------------------|---------|--------------|
@@ -91,7 +91,7 @@ Before using BillClaw, you must provide credentials for the services you want to
 
 These credentials can be provided via:
 1. Environment variables (recommended)
-2. Configuration file (`~/.billclaw/config.json`)
+2. Configuration file (`~/.firela/billclaw/config.json`)
 3. OpenClaw config under `skills.entries.billclaw.env`
 
 ### Installation
@@ -175,13 +175,13 @@ For self-hosted OAuth flows, the Connect server is available as a separate npm p
 
 ## Storage
 
-- **Location**: `~/.billclaw/` (your home directory)
+- **Location**: `~/.firela/billclaw/` (your home directory)
 - **Format**: JSON files with monthly partitioning
 - **Security**: Local-only storage
 
 ## Configuration
 
-Configuration is stored in `~/.billclaw/config.json`:
+Configuration is stored in `~/.firela/billclaw/config.json`:
 
 ```json
 {

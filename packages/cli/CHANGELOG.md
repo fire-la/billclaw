@@ -210,6 +210,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Colored console output with status badges
 - Progress spinners for async operations
 - Table formatting for account display
-- File-based configuration at ~/.billclaw/config.json
+- File-based configuration at ~/.firela/billclaw/config.json
 - CLI runtime adapter with console logger
 - In-memory event emitter for CLI usage

@@ -107,7 +107,7 @@ export type WebhookConfig = z.infer<typeof WebhookConfigSchema>
  * Storage configuration
  */
 export const StorageConfigSchema = z.object({
-  path: z.string().default("~/.billclaw"),
+  path: z.string().default("~/.firela/billclaw"),
   format: z.enum(["json", "csv", "both"]).default("json"),
   encryption: z
     .object({
@@ -220,7 +220,7 @@ export const BillclawConfigSchema = z.object({
   accounts: z.array(AccountConfigSchema).default([]),
   webhooks: z.array(WebhookConfigSchema).default([]),
   storage: StorageConfigSchema.default({
-    path: "~/.billclaw",
+    path: "~/.firela/billclaw",
     format: "json",
     encryption: { enabled: false },
   }),

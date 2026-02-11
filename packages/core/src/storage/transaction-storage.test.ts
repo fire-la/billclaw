@@ -27,7 +27,7 @@ const mockLogger = {
 describe("getStorageDir", () => {
   it("should return default storage directory", async () => {
     const dir = await getStorageDir()
-    expect(dir).toContain(".billclaw")
+    expect(dir).toContain(".firela")
   })
 
   it("should return custom storage directory from config", async () => {

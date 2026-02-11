@@ -99,7 +99,7 @@ export const mockConfig: BillclawConfig = {
     },
   ],
   storage: {
-    path: "~/.billclaw",
+    path: "~/.firela/billclaw",
     format: "json",
     encryption: { enabled: false },
   },

@@ -133,7 +133,7 @@ export async function registerWebhookHandlers(
   const logger = toLogger(api.logger)
 
   // Initialize Core components
-  const storageBase = pluginConfig?.storage?.path || "~/.billclaw"
+  const storageBase = pluginConfig?.storage?.path || "~/.firela/billclaw"
   const basePath = storageBase.startsWith("~")
     ? storageBase.replace("~", process.env.HOME || "")
     : storageBase

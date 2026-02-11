@@ -34,7 +34,7 @@ async function startServer() {
   const config = await configManager.getConfig()
 
   // Get storage base path for webhook cache
-  const storageBase = config.storage?.path || "~/.billclaw"
+  const storageBase = config.storage?.path || "~/.firela/billclaw"
   const basePath = storageBase.startsWith("~")
     ? storageBase.replace("~", process.env.HOME || "")
     : storageBase
