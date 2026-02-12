@@ -7,6 +7,7 @@
 import { Command } from "commander"
 import { CommandRegistry } from "./commands/registry.js"
 import { allCommands } from "./commands/index.js"
+import { registerConnectSubcommands } from "./commands/connect.js"
 
 /**
  * CLI version
@@ -35,6 +36,9 @@ export async function createProgram(): Promise<Command> {
     const command = await loadCommand()
     registry.register(command)
   }
+
+  // Register connect subcommands (special handling for nested commands)
+  registerConnectSubcommands(program)
 
   return program
 }
