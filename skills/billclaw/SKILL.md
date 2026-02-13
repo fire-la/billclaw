@@ -10,10 +10,8 @@ metadata:
         "emoji": "💰",
         "requires":
           {
-            "env": ["PLAID_CLIENT_ID", "PLAID_SECRET", "GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET"],
             "anyBins": ["node"],
           },
-        "primaryEnv": "PLAID_CLIENT_ID",
         "install":
           [
             {
@@ -47,25 +45,34 @@ disable-model-invocation: true
 
 Complete financial data management for OpenClaw with local-first architecture. Sync bank transactions, fetch bills from email, and export to accounting formats.
 
-## Security Guarantee
+## Security & Trust
 
 **BillClaw is safe, open-source software designed with security-first principles.**
 
-- **Transparent packages**: This skill provides installation instructions. All npm packages referenced (`@firela/billclaw-openclaw`, `@firela/billclaw-cli`, `@firela/billclaw-connect`) are separately published, verified, and available on npmjs.com for your review
-- **Local-first architecture**: Your financial data never leaves your machine. All transactions are stored locally in `~/.firela/billclaw/`
-- **Transparent credentials**: You provide and control all API credentials (Plaid, Gmail) through your own accounts
-- **System keychain storage**: Sensitive tokens are encrypted in your platform's secure keychain
-- **No autonomous invocation**: This skill requires explicit user invocation (`disable-model-invocation: true`)
-- **Fully auditable**: All source code is available at https://github.com/fire-la/billclaw under MIT license
+### Verification
 
-**Package Overview:**
-- `@firela/billclaw-openclaw` - **Required** - OpenClaw plugin that provides tools and commands
-- `@firela/billclaw-cli` - **Optional** - Standalone CLI for terminal usage
-- `@firela/billclaw-connect` - **Optional** - OAuth server for self-hosted authentication
+- **Transparent packages**: All npm packages are open-source and published with provenance
+- **Auditable code**: Full source available at [GitHub](https://github.com/fire-la/billclaw)
+- **npm provenance**: Cryptographic proof linking packages to source code
+- **Local-first**: Your financial data never leaves your machine
+- **User-controlled credentials**: You provide all API credentials through your own accounts
+- **System keychain**: Tokens encrypted in your platform's secure keychain
+- **Explicit invocation**: Requires explicit user action (`disable-model-invocation: true`)
+
+See [SECURITY.md](./SECURITY.md) for detailed security architecture and verification steps.
+
+### Addressing Security Concerns
+
+| Concern | Explanation |
+|---------|-------------|
+| **sets-process-name** | Comes from transitive npm dependencies, not BillClaw code |
+| **detect-debug-environment** | Common Node.js ecosystem pattern, not malicious |
+| **API credentials** | Required for functionality; you control them from your accounts |
+| **External packages** | All packages are open-source with npm provenance |
 
 ## Required Credentials
 
-This skill requires the following credentials to function (configure via environment variables or `~/.firela/billclaw/config.json`):
+**Important**: Credentials are NOT required at install time. Configure them when you're ready to use specific features:
 
 | Environment Variable | Purpose | Required For |
 |---------------------|---------|--------------|
@@ -74,29 +81,18 @@ This skill requires the following credentials to function (configure via environ
 | `GMAIL_CLIENT_ID` | Gmail OAuth client ID | Gmail bill fetching |
 | `GMAIL_CLIENT_SECRET` | Gmail OAuth client secret | Gmail bill fetching |
 
-**Important**: These credentials are NOT provided by this skill. You must obtain them from:
+**Obtain credentials from:**
 - **Plaid**: https://dashboard.plaid.com/
 - **Gmail**: https://console.cloud.google.com/apis/credentials
 
-## Quick Start (OpenClaw)
-
-### Prerequisites
-
-Before using BillClaw, you must provide credentials for the services you want to use:
-
-| Service | Required Credentials |
-|---------|---------------------|
-| **Plaid** | PLAID_CLIENT_ID, PLAID_SECRET |
-| **Gmail** | GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET |
-
-These credentials can be provided via:
+**Configure via:**
 1. Environment variables (recommended)
 2. Configuration file (`~/.firela/billclaw/config.json`)
 3. OpenClaw config under `skills.entries.billclaw.env`
 
-### Installation
+## Quick Start (OpenClaw)
 
-Install the BillClaw OpenClaw plugin via npm:
+### 1. Install the Plugin
 
 ```bash
 npm install @firela/billclaw-openclaw
@@ -106,7 +102,21 @@ The plugin registers these tools and commands with OpenClaw:
 - **Tools**: `plaid_sync`, `gmail_fetch`, `conversational_sync`, `conversational_status`
 - **Commands**: `/billclaw-setup`, `/billclaw-sync`, `/billclaw-status`, `/billclaw-config`
 
-### 1. Setup Your Accounts
+### 2. Configure Credentials
+
+When you're ready to use a feature, configure the required credentials:
+
+```bash
+# For Plaid bank sync
+export PLAID_CLIENT_ID="your_client_id"
+export PLAID_SECRET="your_secret"
+
+# For Gmail bill fetching
+export GMAIL_CLIENT_ID="your_client_id"
+export GMAIL_CLIENT_SECRET="your_secret"
+```
+
+### 3. Setup Your Accounts
 
 ```
 /billclaw-setup
@@ -117,7 +127,7 @@ The interactive wizard will guide you through:
 - Configuring Gmail for bill fetching
 - Setting local storage location
 
-### 2. Sync Your Data
+### 4. Sync Your Data
 
 ```
 You: Sync my bank transactions for last month
@@ -131,7 +141,7 @@ Or use the command directly:
 /billclaw-sync --from 2024-01-01 --to 2024-12-31
 ```
 
-### 3. Export to Accounting Formats
+### 5. Export to Accounting Formats
 
 ```
 /billclaw-export --format beancount --output 2024.beancount
