@@ -19,9 +19,17 @@
       "types": "./dist/webhook/index.d.ts",
       "import": "./dist/webhook/index.js"
     },
+    "./connection": {
+      "types": "./dist/connection/index.d.ts",
+      "import": "./dist/connection/index.js"
+    },
     "./relay": {
       "types": "./dist/relay/index.d.ts",
       "import": "./dist/relay/index.js"
+    },
+    "./pkce": {
+      "types": "./dist/pkce.d.ts",
+      "import": "./dist/pkce.js"
     }
   },
   "files": [
