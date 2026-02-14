@@ -14,6 +14,12 @@ import {
 import type { AccountConfig } from "@firela/billclaw-core"
 import { randomUUID } from "crypto"
 import { logError, parseOauthError, formatOauthError } from "@firela/billclaw-core/errors"
+import {
+  generatePKCEPair,
+  initConnectSession,
+  retrieveCredential,
+  confirmCredentialDeletion,
+} from "@firela/billclaw-core/oauth"
 /**
  * Default OAuth timeout in milliseconds (10 minutes)
  */
@@ -23,6 +29,11 @@ const DEFAULT_OAUTH_TIMEOUT = 10 * 60 * 1000
  * Polling interval for credential retrieval in milliseconds
  */
 const POLL_INTERVAL = 3000
+
+/**
+ * Long-polling timeout in seconds (for Relay mode)
+ */
+const LONG_POLL_TIMEOUT = 30
 
 /**
  * Run Plaid connect command
@@ -60,27 +71,33 @@ export async function runPlaidConnect(
     process.exit(1)
   }
 
-  // Generate session ID
-  const sessionId = randomUUID()
-  console.log(`Session ID: ${sessionId}`)
-  console.log("")
-
   // Get connection details based on mode
   const config = await runtime.config.getConfig()
   const publicUrl = config.connect?.publicUrl
 
-  // Determine OAuth URL based on mode
+  // Determine session and URL based on mode
+  let sessionId: string
   let connectUrl: string
+  let pkceCodeVerifier: string | undefined
+
   if (modeSelection.mode === "direct" && publicUrl) {
-    // Direct mode: use local Connect service
+    // Direct mode: Use local Connect service (no PKCE needed)
+    sessionId = randomUUID()
     connectUrl = `${publicUrl}/oauth/plaid/link?session=${sessionId}`
     console.log("Opening Plaid Link via your Connect service...")
   } else {
-    // Relay mode: use Firela Relay
-    const relayUrl = "https://connect.firela.io"
-    connectUrl = `${relayUrl}/plaid?session=${sessionId}`
-    console.log("Opening Plaid Link via Firela Relay...")
+    // Relay mode: Use Firela Relay with PKCE
+    const pkcePair = generatePKCEPair("S256", 128)
+    pkceCodeVerifier = pkcePair.codeVerifier
+
+    const relayUrl = "https://relay.firela.io"
+    sessionId = await initConnectSession(relayUrl, pkcePair)
+    connectUrl = `https://connect.firela.io/plaid?session=${sessionId}`
+    console.log("Opening Plaid Link via Firela Relay (PKCE enabled)...")
   }
+
+  console.log(`Session ID: ${sessionId}`)
+  console.log("")
 
   console.log("")
   console.log(`URL: ${connectUrl}`)
@@ -118,6 +135,7 @@ export async function runPlaidConnect(
     const credential = await pollForCredential(
       context,
       sessionId,
+      pkceCodeVerifier, // undefined for Direct mode, string for Relay mode
       modeSelection.mode,
       publicUrl,
       timeoutMs,
@@ -168,10 +186,18 @@ export async function runPlaidConnect(
 
 /**
  * Poll for credential completion
+ *
+ * @param context - CLI context
+ * @param sessionId - Session ID
+ * @param codeVerifier - PKCE code verifier (undefined for Direct mode, string for Relay mode)
+ * @param mode - Connection mode
+ * @param publicUrl - Public URL for Direct mode
+ * @param timeout - Timeout in milliseconds
  */
 async function pollForCredential(
   context: CliContext,
   sessionId: string,
+  codeVerifier: string | undefined,
   mode: string,
   publicUrl?: string,
   timeout: number = DEFAULT_OAUTH_TIMEOUT,
@@ -179,43 +205,85 @@ async function pollForCredential(
   const { runtime } = context
   const startTime = Date.now()
 
-  while (Date.now() - startTime < timeout) {
-    try {
-      // Determine polling endpoint based on mode
-      let pollUrl: string
-      if (mode === "direct" && publicUrl) {
-        pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
-      } else {
-        pollUrl = `https://relay.firela.io/api/connect/credentials/${sessionId}`
+  // Direct mode: Poll local Connect service (no PKCE)
+  if (mode === "direct" && publicUrl && !codeVerifier) {
+    while (Date.now() - startTime < timeout) {
+      try {
+        const pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
+        const response = await fetch(pollUrl, {
+          method: "GET",
+          signal: AbortSignal.timeout(5000),
+        })
+
+        if (response.ok) {
+          const data = (await response.json()) as {
+            accessToken?: string
+            itemId?: string
+          }
+          if (data.accessToken) {
+            return {
+              accessToken: data.accessToken,
+              itemId: data.itemId,
+            }
+          }
+        }
+      } catch {
+        // Ignore polling errors, retry
       }
 
-      const response = await fetch(pollUrl, {
-        method: "GET",
-        signal: AbortSignal.timeout(5000),
-      })
-
-      if (response.ok) {
-        const data = (await response.json()) as {
-          accessToken: string
-          itemId?: string
-        }
-        if (data.accessToken) {
-          return data
-        }
-
-        // Handle fetch error
-        const fetchError = parseOauthError(
-          { message: `Failed to poll credentials: ${response.statusText}` },
-          { provider: "plaid", operation: "polling", sessionId },
-        )
-        logError(runtime.logger, fetchError, { operation: "plaid_credential_poll" })
-      }
-    } catch {
-      // Ignore polling errors, retry
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
     }
 
-    // Wait before next poll
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
+    const timeoutError = parseOauthError(
+      { message: "OAuth timed out" },
+      { provider: "plaid", operation: "polling", sessionId, timeout },
+    )
+    logError(runtime.logger, timeoutError, { operation: "plaid_oauth_timeout" })
+    throw timeoutError
+  }
+
+  // Relay mode: Use PKCE-enabled retrieval
+  if (!codeVerifier) {
+    throw new Error("code_verifier required for Relay mode")
+  }
+
+  const relayUrl = "https://relay.firela.io"
+
+  while (Date.now() - startTime < timeout) {
+    try {
+      const credential = await retrieveCredential(relayUrl, {
+        sessionId,
+        codeVerifier,
+        wait: true,
+        timeout: LONG_POLL_TIMEOUT,
+      })
+
+      if (credential?.public_token) {
+        // Confirm deletion (optional cleanup)
+        await confirmCredentialDeletion(relayUrl, sessionId).catch(() => {
+          // Ignore deletion errors
+        })
+
+        return {
+          accessToken: credential.public_token,
+          itemId: credential.metadata,
+        }
+      }
+    } catch (error) {
+      const errorMessage = String(error)
+
+      // Check for terminal errors (don't retry)
+      if (
+        errorMessage.includes("expired") ||
+        errorMessage.includes("invalid code_verifier") ||
+        errorMessage.includes("maximum retrieval")
+      ) {
+        throw error
+      }
+
+      // Log transient errors
+      runtime.logger.debug(`Transient error polling for ${sessionId}: ${errorMessage}`)
+    }
   }
 
   const timeoutError = parseOauthError(

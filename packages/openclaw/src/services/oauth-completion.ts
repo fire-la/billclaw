@@ -12,6 +12,12 @@ import type { OpenClawPluginApi } from "../types/openclaw-plugin.js"
 import { randomUUID } from "crypto"
 import { getConfig } from "@firela/billclaw-core"
 import { logError, parseOauthError } from "@firela/billclaw-core/errors"
+import {
+  generatePKCEPair,
+  initConnectSession,
+  retrieveCredential,
+  confirmCredentialDeletion,
+} from "@firela/billclaw-core/oauth"
 
 // Re-export types for consumers
 export type { OAuthCompletionResult, OAuthCompletionCallback }
@@ -29,6 +35,7 @@ interface OAuthSession {
   status: "pending" | "completed" | "failed" | "cancelled" | "timeout"
   pollInterval?: NodeJS.Timeout
   deviceCode?: string // For Gmail Device Code Flow
+  codeVerifier?: string // PKCE code verifier (Relay mode only)
 }
 
 /**
@@ -119,8 +126,6 @@ export async function startOAuthSession(
   const logger = toLogger(api.logger)
   const config = await getConfig()
 
-  // Generate session ID
-  const sessionId = params.deviceCode || randomUUID()
   const mode = params.mode || "auto"
   const timeout = params.timeout || DEFAULT_OAUTH_TIMEOUT
 
@@ -136,6 +141,37 @@ export async function startOAuthSession(
     actualMode = "direct"
   }
 
+  let sessionId: string
+  let connectUrl: string
+  let userCode: string | undefined
+  let codeVerifier: string | undefined
+
+  if (params.provider === "plaid") {
+    if (actualMode === "direct" && publicUrl) {
+      // Direct mode: No PKCE, use local Connect service
+      sessionId = randomUUID()
+      connectUrl = `${publicUrl}/oauth/plaid/link?session=${sessionId}`
+      logger.info?.(`OAuth session started: ${sessionId} (plaid, direct mode, local OAuth)`)
+    } else {
+      // Relay mode: PKCE required
+      const pkcePair = generatePKCEPair("S256", 128)
+      codeVerifier = pkcePair.codeVerifier
+
+      const relayUrl = "https://relay.firela.io"
+      sessionId = await initConnectSession(relayUrl, pkcePair)
+      connectUrl = `https://connect.firela.io/plaid?session=${sessionId}`
+
+      logger.info?.(`OAuth session started: ${sessionId} (plaid, relay mode, PKCE enabled)`)
+    }
+  } else {
+    // Gmail - use device code (unchanged)
+    sessionId = params.deviceCode || randomUUID()
+    userCode = params.deviceCode
+    connectUrl = `https://oauth2.googleapis.com/device` // Activation URL
+
+    logger.info?.(`OAuth session started: ${sessionId} (gmail, ${actualMode} mode)`)
+  }
+
   // Create session
   const session: OAuthSession = {
     sessionId,
@@ -146,26 +182,10 @@ export async function startOAuthSession(
     accountName: params.accountName,
     status: "pending",
     deviceCode: params.deviceCode,
+    codeVerifier, // Only set for Relay mode
   }
 
   activeSessions.set(sessionId, session)
-  logger.info?.(`OAuth session started: ${sessionId} (${params.provider}, ${actualMode} mode)`)
-
-  // Generate connection URL
-  let connectUrl: string
-  let userCode: string | undefined
-
-  if (params.provider === "plaid") {
-    if (actualMode === "direct" && publicUrl) {
-      connectUrl = `${publicUrl}/oauth/plaid/link?session=${sessionId}`
-    } else {
-      connectUrl = `https://connect.firela.io/plaid?session=${sessionId}`
-    }
-  } else {
-    // Gmail - user code should be already provided via params
-    userCode = params.deviceCode
-    connectUrl = `https://oauth2.googleapis.com/device` // Activation URL
-  }
 
   // Start polling
   session.pollInterval = setInterval(
@@ -209,29 +229,68 @@ async function pollForCompletion(
     let credential: OAuthCompletionResult["credentials"] | null = null
 
     if (session.provider === "plaid") {
-      // Poll for Plaid credential
-      let pollUrl: string
-      if (session.mode === "direct" && publicUrl) {
-        pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
-      } else {
-        pollUrl = `https://relay.firela.io/api/connect/credentials/${sessionId}`
-      }
+      if (session.mode === "direct" && publicUrl && !session.codeVerifier) {
+        // Direct mode: Poll local Connect service (no PKCE)
+        const pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
 
-      const response = await fetch(pollUrl, {
-        method: "GET",
-        signal: AbortSignal.timeout(5000),
-      })
+        const response = await fetch(pollUrl, {
+          method: "GET",
+          signal: AbortSignal.timeout(5000),
+        })
 
-      if (response.ok) {
-        const data = (await response.json()) as {
-          accessToken?: string
-          itemId?: string
-        }
-        if (data.accessToken) {
-          credential = {
-            accessToken: data.accessToken,
-            itemId: data.itemId,
+        if (response.ok) {
+          const data = (await response.json()) as {
+            accessToken?: string
+            itemId?: string
           }
+          if (data.accessToken) {
+            credential = {
+              accessToken: data.accessToken,
+              itemId: data.itemId,
+            }
+          }
+        }
+      } else {
+        // Relay mode: Use PKCE-enabled retrieval
+        if (!session.codeVerifier) {
+          throw new Error("No code_verifier for Relay mode Plaid session")
+        }
+
+        const relayUrl = "https://relay.firela.io"
+
+        try {
+          const credData = await retrieveCredential(relayUrl, {
+            sessionId,
+            codeVerifier: session.codeVerifier,
+            wait: true,
+            timeout: 30,
+          })
+
+          if (credData?.public_token) {
+            await confirmCredentialDeletion(relayUrl, sessionId).catch(() => {
+              // Ignore deletion errors
+            })
+
+            credential = {
+              accessToken: credData.public_token,
+              itemId: credData.metadata,
+            }
+          }
+        } catch (error) {
+          const errorMessage = String(error)
+
+          // Check for terminal errors
+          if (
+            errorMessage.includes("expired") ||
+            errorMessage.includes("invalid code_verifier") ||
+            errorMessage.includes("maximum retrieval")
+          ) {
+            throw error
+          }
+
+          // Transient error, continue polling
+          logger.debug?.(`Transient error polling for ${sessionId}: ${errorMessage}`)
+          return
         }
       }
     } else {
