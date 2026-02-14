@@ -23,6 +23,11 @@ function createBillclaw(api: OpenClawPluginApi): Billclaw {
 export { webhookStatusTool } from "./webhook-status.tool.js"
 export { webhookConnectTool } from "./webhook-connect.tool.js"
 
+// Export connect tools
+export { connectStatusTool } from "./connect-status.tool.js"
+export { connectPlaidTool } from "./connect-plaid.tool.js"
+export { connectGmailTool } from "./connect-gmail.tool.js"
+
 /**
  * Plaid sync tool
  */

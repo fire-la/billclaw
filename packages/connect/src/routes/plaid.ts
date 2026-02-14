@@ -8,6 +8,12 @@
 
 import express from "express"
 import type { Router } from "express"
+
+import {
+  logError,
+  parseOauthError,
+} from "@firela/billclaw-core/errors"
+
 import {
   plaidOAuthHandler,
   ConfigManager,
@@ -33,10 +39,20 @@ plaidRouter.get("/link-token", async (_req, res) => {
       plaidUrl: result.url,
     })
   } catch (error) {
-    console.error("Error creating Plaid Link token:", error)
+    const linkError = parseOauthError(
+      error as Error | { code?: string; message?: string; status?: number },
+      {
+        provider: "plaid",
+        operation: "link_token",
+      },
+    )
+    // TODO: Add proper logger middleware to Connect service
+    console.error("[plaid_link_token]", linkError)
+
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: linkError.humanReadable.message,
+      errorCode: linkError.errorCode,
     })
   }
 })
@@ -67,10 +83,20 @@ plaidRouter.post("/exchange", async (req, res) => {
       itemId: result.itemId,
     })
   } catch (error) {
-    console.error("Error exchanging Plaid public token:", error)
+    const exchangeError = parseOauthError(
+      error as Error | { code?: string; message?: string; status?: number },
+      {
+        provider: "plaid",
+        operation: "public_token_exchange",
+      },
+    )
+    // TODO: Add proper logger middleware to Connect service
+    console.error("[plaid_token_exchange]", exchangeError)
+
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: exchangeError.humanReadable.message,
+      errorCode: exchangeError.errorCode,
     })
   }
 })

@@ -4,6 +4,10 @@
  * Exports configuration types, mode selection logic, and webhook manager
  * for webhook reception via Direct/Relay/Polling modes.
  *
+ * NOTE: Mode selection functions (selectMode, isDirectAvailable, etc.)
+ * are now exported from the connection module. This module only exports
+ * webhook-specific configuration and types.
+ *
  * @packageDocumentation
  */
 
@@ -24,7 +28,7 @@ export type {
 
 export type {
   ModeSelectionResult,
-} from "./mode-selector.js"
+} from "../connection/types.js"
 
 export type {
   WebhookManagerOptions,
@@ -46,14 +50,9 @@ export {
   ConnectionStatusSchema,
 } from "./config.js"
 
-export {
-  isDirectAvailable,
-  isRelayAvailable,
-  selectMode,
-  getFallbackMode,
-  canUpgradeMode,
-  getBestAvailableMode,
-} from "./mode-selector.js"
+// Mode selection functions are now in connection module
+// Use: import { selectMode } from '@firela/billclaw-core/connection'
+// Or: import { selectMode } from '@firela/billclaw-core' (re-exported via connection)
 
 export {
   WebhookManager,

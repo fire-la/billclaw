@@ -36,6 +36,9 @@ export enum ErrorCategory {
   // Webhook errors (inbound webhook receiver)
   WEBHOOK = "webhook",
 
+  // OAuth errors (OAuth flow and device code flow)
+  OAUTH = "oauth",
+
   // General errors
   UNKNOWN = "unknown",
 }
@@ -110,6 +113,26 @@ export const ERROR_CODES = {
   WEBHOOK_HEALTH_CHECK_FAILED: "WEBHOOK_HEALTH_CHECK_FAILED",
   WEBHOOK_DIRECT_UNAVAILABLE: "WEBHOOK_DIRECT_UNAVAILABLE",
   WEBHOOK_SETUP_FAILED: "WEBHOOK_SETUP_FAILED",
+
+  // OAuth errors (OAuth flow and device code flow)
+  OAUTH_TIMEOUT: "OAUTH_TIMEOUT",
+  OAUTH_POLLING_TIMEOUT: "OAUTH_POLLING_TIMEOUT",
+  OAUTH_FAILED: "OAUTH_FAILED",
+  OAUTH_CANCELLED: "OAUTH_CANCELLED",
+  OAUTH_STATE_INVALID: "OAUTH_STATE_INVALID",
+  OAUTH_STATE_EXPIRED: "OAUTH_STATE_EXPIRED",
+  OAUTH_DEVICE_CODE_EXPIRED: "OAUTH_DEVICE_CODE_EXPIRED",
+  OAUTH_DEVICE_CODE_FAILED: "OAUTH_DEVICE_CODE_FAILED",
+  OAUTH_AUTHORIZATION_PENDING: "OAUTH_AUTHORIZATION_PENDING",
+  OAUTH_SLOW_DOWN: "OAUTH_SLOW_DOWN",
+  OAUTH_ACCESS_DENIED: "OAUTH_ACCESS_DENIED",
+  OAUTH_BROWSER_LAUNCH_FAILED: "OAUTH_BROWSER_LAUNCH_FAILED",
+  OAUTH_CREDENTIAL_MISSING: "OAUTH_CREDENTIAL_MISSING",
+  OAUTH_PLAID_LINK_TOKEN_FAILED: "OAUTH_PLAID_LINK_TOKEN_FAILED",
+  OAUTH_PLAID_PUBLIC_TOKEN_FAILED: "OAUTH_PLAID_PUBLIC_TOKEN_FAILED",
+  OAUTH_GMAIL_AUTH_URL_FAILED: "OAUTH_GMAIL_AUTH_URL_FAILED",
+  OAUTH_GMAIL_CODE_EXCHANGE_FAILED: "OAUTH_GMAIL_CODE_EXCHANGE_FAILED",
+  OAUTH_GMAIL_API_ERROR: "OAUTH_GMAIL_API_ERROR",
 
   // Generic
   UNKNOWN_ERROR: "UNKNOWN_ERROR",
@@ -290,9 +313,9 @@ export function formatError(error: UserError): string {
   return lines.join("\n")
 }
 
-/**
- * Get severity indicator for display
- */
+// Re-export OAuth error handling functions
+export * from "./oauth-errors.js"
+export type { OAuthErrorContext } from "./oauth-errors.js"
 function getSeverityIndicator(severity: ErrorSeverity): string {
   const indicators: Record<ErrorSeverity, string> = {
     fatal: "🔴",
@@ -320,6 +343,7 @@ function getCategoryEmoji(category: ErrorCategory): string {
     [ErrorCategory.FILE_SYSTEM]: "📁",
     [ErrorCategory.RELAY]: "🔌",
     [ErrorCategory.WEBHOOK]: "🪝",
+    [ErrorCategory.OAUTH]: "🔑",
     [ErrorCategory.UNKNOWN]: "❓",
   }
   return emojis[category] || "❓"

@@ -25,7 +25,7 @@ export const webhookStatusTool = {
     try {
       const runtime = await import("../runtime/context.js")
       const { getConfig } = await import("@firela/billclaw-core")
-      const { selectMode } = await import("@firela/billclaw-core/webhook")
+      const { selectMode } = await import("@firela/billclaw-core/connection")
 
       const context = new runtime.OpenClawRuntimeContext(api)
       const config = await getConfig()

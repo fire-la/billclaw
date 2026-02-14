@@ -8,6 +8,12 @@
 
 import express from "express"
 import type { Router } from "express"
+
+import {
+  logError,
+  parseOauthError,
+} from "@firela/billclaw-core/errors"
+
 import {
   gmailOAuthHandler,
   ConfigManager,
@@ -34,10 +40,20 @@ gmailRouter.get("/authorize", async (req, res) => {
       state: result.state,
     })
   } catch (error) {
-    console.error("Error generating Gmail authorization URL:", error)
+    const authError = parseOauthError(
+      error as Error | { code?: string; message?: string; status?: number },
+      {
+        provider: "gmail",
+        operation: "auth_url",
+      },
+    )
+    // TODO: Add proper logger middleware to Connect service
+    console.error("[gmail_authorize]", authError)
+
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: authError.humanReadable.message,
+      errorCode: authError.errorCode,
     })
   }
 })
@@ -52,9 +68,17 @@ gmailRouter.post("/exchange", async (req, res) => {
     const { code, state, redirectUri } = req.body
 
     if (!code || !state) {
+      const validationError = parseOauthError(
+        { message: "code and state are required" },
+        { provider: "gmail", operation: "code_exchange" },
+      )
+      // TODO: Add proper logger middleware to Connect service
+      console.error("[gmail_exchange_validation]", validationError)
+
       return res.status(400).json({
         success: false,
-        error: "code and state are required",
+        error: validationError.humanReadable.message,
+        errorCode: validationError.errorCode,
       })
     }
 
@@ -69,10 +93,20 @@ gmailRouter.post("/exchange", async (req, res) => {
       expiresIn: result.expiresIn,
     })
   } catch (error) {
-    console.error("Error exchanging Gmail authorization code:", error)
+    const exchangeError = parseOauthError(
+      error as Error | { code?: string; message?: string; status?: number },
+      {
+        provider: "gmail",
+        operation: "code_exchange",
+      },
+    )
+    // TODO: Add proper logger middleware to Connect service
+    console.error("[gmail_exchange]", exchangeError)
+
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: exchangeError.humanReadable.message,
+      errorCode: exchangeError.errorCode,
     })
   }
 })

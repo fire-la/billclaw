@@ -10,3 +10,16 @@ export {
   stopWebhookListener,
   getWebhookListenerStatus,
 } from "./webhook-listener.js"
+
+// OAuth completion service
+export {
+  startOAuthSession,
+  cancelOAuthSession,
+  onOAuthComplete,
+  offOAuthComplete,
+  getOAuthSessionStatus,
+  getActiveOAuthSessions,
+  cleanupCompletedSessions,
+} from "./oauth-completion.js"
+
+export type { OAuthCompletionResult, OAuthCompletionCallback } from "./oauth-completion.js"

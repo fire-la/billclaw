@@ -16,6 +16,9 @@ import {
   conversationalHelpTool,
   webhookStatusTool,
   webhookConnectTool,
+  connectStatusTool,
+  connectPlaidTool,
+  connectGmailTool,
 } from "./tools/index.js"
 import { registerWebhookHandlers } from "./services/webhook-handler.js"
 import { runSetupWizard } from "./setup/index.js"
@@ -122,6 +125,40 @@ export default {
       parameters: webhookConnectTool.parameters,
       execute: async (_toolCallId, params) => {
         return webhookConnectTool.execute(api, params as never)
+      },
+    })
+
+    // ========================================================================
+    // Unified Connection Tools
+    // ========================================================================
+
+    api.registerTool({
+      name: connectStatusTool.name,
+      label: connectStatusTool.label,
+      description: connectStatusTool.description,
+      parameters: connectStatusTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return connectStatusTool.execute(api, params as never)
+      },
+    })
+
+    api.registerTool({
+      name: connectPlaidTool.name,
+      label: connectPlaidTool.label,
+      description: connectPlaidTool.description,
+      parameters: connectPlaidTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return connectPlaidTool.execute(api, params as never)
+      },
+    })
+
+    api.registerTool({
+      name: connectGmailTool.name,
+      label: connectGmailTool.label,
+      description: connectGmailTool.description,
+      parameters: connectGmailTool.parameters,
+      execute: async (_toolCallId, params) => {
+        return connectGmailTool.execute(api, params as never)
       },
     })
 

@@ -21,7 +21,7 @@ import {
   canUpgradeMode,
   getBestAvailableMode,
   isDirectAvailable,
-} from "./mode-selector.js"
+} from "../connection/mode-selector.js"
 
 /**
  * Webhook manager state
@@ -357,7 +357,7 @@ export class WebhookManager {
       this.options.autoModeSwitching &&
       (state === "failed" || state === "closed")
     ) {
-      const fallbackMode = getFallbackMode(this.state.currentMode)
+      const fallbackMode = getFallbackMode(this.state.currentMode, "webhook")
       if (fallbackMode !== this.state.currentMode) {
         this.context.logger.warn(
           `Relay connection failed, falling back to ${fallbackMode}`,
@@ -407,7 +407,7 @@ export class WebhookManager {
     const isHealthy = await this.checkCurrentModeHealth()
 
     if (!isHealthy && this.options.autoModeSwitching) {
-      const fallbackMode = getFallbackMode(this.state.currentMode)
+      const fallbackMode = getFallbackMode(this.state.currentMode, "webhook")
       if (fallbackMode !== this.state.currentMode) {
         this.context.logger.warn(
           `Current mode unhealthy, falling back to ${fallbackMode}`,
@@ -423,7 +423,7 @@ export class WebhookManager {
   private async checkCurrentModeHealth(): Promise<boolean> {
     switch (this.state.currentMode) {
       case "direct":
-        return await isDirectAvailable(this.context)
+        return (await isDirectAvailable(this.context)).available
 
       case "relay":
         if (!this.relayClient) {

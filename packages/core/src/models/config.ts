@@ -9,6 +9,42 @@ import { z } from "zod"
 import { InboundWebhookReceiverConfigSchema } from "../webhook/config.js"
 
 /**
+ * Unified connection mode for OAuth and webhooks
+ *
+ * This mode controls how BillClaw connects to external services for:
+ * - OAuth flow completion (Plaid Link, Gmail authorization)
+ * - Webhook reception (Plaid, GoCardless, Gmail notifications)
+ *
+ * @see ADR-005 for architecture details
+ */
+export const ConnectionModeSchema = z.enum([
+  "auto", // Auto-detect optimal mode (Direct > Relay > Polling)
+  "direct", // Force user's Connect service (requires publicUrl)
+  "relay", // Force Firela Relay service
+  "polling", // Force API polling (webhooks only, not for OAuth)
+])
+export type ConnectionMode = z.infer<typeof ConnectionModeSchema>
+
+/**
+ * Connection mode selector configuration
+ *
+ * Controls both OAuth completion and webhook reception modes.
+ * Unified configuration to simplify user mental model.
+ */
+export const ConnectionModeSelectorSchema = z.object({
+  mode: ConnectionModeSchema.default("auto"),
+  healthCheck: z
+    .object({
+      enabled: z.boolean().default(true),
+      timeout: z.number().int().positive().default(5000),
+      retries: z.number().int().min(0).max(5).default(2),
+      retryDelay: z.number().int().positive().default(1000),
+    })
+    .default({}),
+})
+export type ConnectionModeSelector = z.infer<typeof ConnectionModeSelectorSchema>
+
+/**
  * Account types supported by BillClaw
  */
 export const AccountTypeSchema = z.enum(["plaid", "gocardless", "gmail"])
@@ -193,7 +229,20 @@ export const ConnectConfigSchema = z.object({
     .default({ enabled: false })
     .optional(),
   /**
-   * Inbound webhook receiver configuration
+   * Unified connection mode selector for OAuth and webhooks
+   *
+   * Controls both:
+   * - OAuth flow completion (Plaid Link, Gmail authorization)
+   * - Webhook reception (Plaid, GoCardless, Gmail notifications)
+   *
+   * Replaces the deprecated 'receiver' configuration with a simpler,
+   * unified approach. Use this for new configurations.
+   */
+  connection: ConnectionModeSelectorSchema.optional(),
+  /**
+   * Inbound webhook receiver configuration (DEPRECATED)
+   *
+   * @deprecated Use 'connection' instead for unified OAuth + webhook control
    *
    * Unified webhook receiver supporting Direct/Relay/Polling modes for
    * receiving real-time notifications from external services (Plaid, GoCardless, Gmail).
