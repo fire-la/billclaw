@@ -22,6 +22,23 @@ export type {
   OAuthHandlerOptions,
 } from "./types.js"
 
+// PKCE utilities (RFC 7636)
+export {
+  generateCodeVerifier,
+  generateCodeChallenge,
+  generatePKCEPair,
+  verifyPKCE,
+  initConnectSession,
+  retrieveCredential,
+  confirmCredentialDeletion,
+  type PKCEPair,
+  type CodeChallengeMethod,
+  type InitSessionRequest,
+  type InitSessionResponse,
+  type RetrieveCredentialRequest,
+  type RetrieveCredentialResponse,
+} from "./pkce.js"
+
 // Plaid
 export {
   createLinkToken,

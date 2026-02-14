@@ -15,7 +15,7 @@ import {
   initConnectSession,
   retrieveCredential,
   confirmCredentialDeletion,
-} from "@firela/billclaw-core/pkce"
+} from "@firela/billclaw-core/oauth"
 
 /**
  * Default OAuth timeout in milliseconds (10 minutes)
