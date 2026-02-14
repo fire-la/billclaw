@@ -47,8 +47,11 @@ export function generateCodeVerifier(length: number = 128): string {
 /**
  * Generate code challenge from code verifier
  *
- * For S256 method: SHA256 hash of the verifier, base64url encoded
+ * For S256 method: SHA256 hash of the verifier, hex encoded
  * For plain method: the verifier itself
+ *
+ * Note: Uses hex encoding to match ToyKit relay server implementation.
+ * While RFC 7636 specifies base64url, the server uses hex for simplicity.
  *
  * @param codeVerifier - The code verifier string
  * @param method - Challenge method (default: S256)
@@ -62,9 +65,9 @@ export function generateCodeChallenge(
     return codeVerifier
   }
 
-  // S256: SHA256 hash, base64url encoded
+  // S256: SHA256 hash, hex encoded (matches ToyKit relay server)
   const hash = crypto.createHash("sha256").update(codeVerifier).digest()
-  return base64URLEncode(hash)
+  return hash.toString("hex")
 }
 
 /**
