@@ -26,11 +26,6 @@ import {
 const DEFAULT_OAUTH_TIMEOUT = 10 * 60 * 1000
 
 /**
- * Polling interval for credential retrieval in milliseconds
- */
-const POLL_INTERVAL = 3000
-
-/**
  * Long-polling timeout in seconds (for Relay mode)
  */
 const LONG_POLL_TIMEOUT = 30
@@ -199,47 +194,24 @@ async function pollForCredential(
   sessionId: string,
   codeVerifier: string | undefined,
   mode: string,
-  publicUrl?: string,
+  _publicUrl?: string,
   timeout: number = DEFAULT_OAUTH_TIMEOUT,
 ): Promise<{ accessToken: string; itemId?: string }> {
   const { runtime } = context
-  const startTime = Date.now()
 
-  // Direct mode: Poll local Connect service (no PKCE)
-  if (mode === "direct" && publicUrl && !codeVerifier) {
-    while (Date.now() - startTime < timeout) {
-      try {
-        const pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
-        const response = await fetch(pollUrl, {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        })
-
-        if (response.ok) {
-          const data = (await response.json()) as {
-            accessToken?: string
-            itemId?: string
-          }
-          if (data.accessToken) {
-            return {
-              accessToken: data.accessToken,
-              itemId: data.itemId,
-            }
-          }
-        }
-      } catch {
-        // Ignore polling errors, retry
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
-    }
-
-    const timeoutError = parseOauthError(
-      { message: "OAuth timed out" },
-      { provider: "plaid", operation: "polling", sessionId, timeout },
+  // Direct mode does not support automatic credential polling
+  // The local Connect service does not have /api/connect/* endpoints
+  // See ADR-007: Direct Mode Manual Completion for OAuth
+  if (mode === "direct") {
+    const directModeError = parseOauthError(
+      { message: "Direct mode does not support automatic credential polling" },
+      { provider: "plaid", operation: "polling", sessionId },
     )
-    logError(runtime.logger, timeoutError, { operation: "plaid_oauth_timeout" })
-    throw timeoutError
+    logError(runtime.logger, directModeError, { operation: "plaid_direct_mode_polling" })
+    throw new Error(
+      "Direct mode does not support automatic credential polling. " +
+        "Please complete the OAuth flow in your browser and manually configure the account.",
+    )
   }
 
   // Relay mode: Use PKCE-enabled retrieval
@@ -248,6 +220,7 @@ async function pollForCredential(
   }
 
   const relayUrl = "https://relay.firela.io"
+  const startTime = Date.now()
 
   while (Date.now() - startTime < timeout) {
     try {
