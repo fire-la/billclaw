@@ -20,6 +20,9 @@ import type {
   GmailTokenResult,
   GmailOAuthResult,
 } from "../types.js"
+import {
+  generatePKCEPair,
+} from "../pkce.js"
 
 /**
  * State parameter storage (in-memory for security)
@@ -44,38 +47,6 @@ export function cleanupExpiredStates(): void {
 }
 
 /**
- * Generate random code verifier for PKCE
- */
-function generateCodeVerifier(): string {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return base64UrlEncode(array)
-}
-
-/**
- * Generate code challenge from verifier for PKCE
- */
-async function generateCodeChallenge(
-  verifier: string,
-): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(verifier)
-  const hash = await crypto.subtle.digest("SHA-256", data)
-  return base64UrlEncode(new Uint8Array(hash))
-}
-
-/**
- * Base64URL encode a byte array
- */
-function base64UrlEncode(bytes: Uint8Array): string {
-  const binString = Array.from(bytes, (byte) =>
-    String.fromCharCode(byte),
-  )
-  const base64 = btoa(binString.join(""))
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
-}
-
-/**
  * Generate Gmail OAuth authorization URL
  *
  * Uses PKCE for security without requiring client secret.
@@ -87,9 +58,10 @@ export async function generateAuthorizationUrl(
 ): Promise<GmailAuthUrlResult> {
   cleanupExpiredStates()
 
-  // Generate PKCE verifier and challenge
-  const codeVerifier = generateCodeVerifier()
-  const codeChallenge = await generateCodeChallenge(codeVerifier)
+  // Generate PKCE verifier and challenge using core module
+  const pkcePair = generatePKCEPair("S256", 128)
+  const codeVerifier = pkcePair.codeVerifier
+  const codeChallenge = pkcePair.codeChallenge
 
   // Generate state parameter for CSRF protection
   const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))

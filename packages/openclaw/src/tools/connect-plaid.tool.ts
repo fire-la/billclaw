@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 
+import { randomUUID } from "crypto"
 import type { OpenClawPluginApi } from "../types/openclaw-plugin.js"
 import { parseOauthError, logError } from "@firela/billclaw-core/errors"
 import {
@@ -132,33 +133,28 @@ export const connectPlaidTool = {
       const config = await getConfig()
       const publicUrl = config.connect?.publicUrl
 
-      // Determine relay URL based on mode
-      let relayUrl: string
-      let connectUrlBase: string
+      // Generate session and connect URL based on mode
+      let sessionId: string
+      let connectUrl: string
       let modeDescription: string
+      let pkcePair: { codeVerifier: string; codeChallenge: string; codeChallengeMethod: "S256" | "plain" } | undefined
 
       if (modeSelection.mode === "direct" && publicUrl) {
-        // Direct mode: use local Connect service
-        relayUrl = publicUrl
-        connectUrlBase = publicUrl
+        // Direct mode: No PKCE, use local Connect service (no /api/connect/session endpoint)
+        sessionId = randomUUID()
+        connectUrl = `${publicUrl}/oauth/plaid/link?session=${sessionId}`
         modeDescription = "Direct (your Connect service)"
       } else {
-        // Relay mode: use Firela Relay
-        relayUrl = "https://relay.firela.io"
-        connectUrlBase = "https://connect.firela.io"
+        // Relay mode: PKCE required, use Firela Relay
+        const relayUrl = "https://relay.firela.io"
+        pkcePair = generatePKCEPair("S256", 128)
+        sessionId = await initConnectSession(relayUrl, pkcePair)
+        connectUrl = `https://connect.firela.io/plaid?session=${sessionId}`
         modeDescription = "Relay (Firela Relay service)"
       }
 
-      // Generate PKCE pair for security
-      const pkcePair = generatePKCEPair("S256", 128)
-
-      // Initialize session with PKCE challenge on relay server
-      const sessionId = await initConnectSession(relayUrl, pkcePair)
-
-      // Build connect URL with session ID
-      const connectUrl = `${connectUrlBase}/plaid?session=${sessionId}`
-
       // Build response with machine-readable and human-readable output
+      const pkceEnabled = modeSelection.mode === "relay"
       const machineReadable = {
         success: true,
         sessionId,
@@ -167,7 +163,7 @@ export const connectPlaidTool = {
         connectUrl,
         accountName,
         timeoutSeconds: timeoutMs / 1000,
-        pkceEnabled: true,
+        pkceEnabled,
         status: "pending_user_action",
         nextActions: [
           "Open the provided URL in a browser",
@@ -185,7 +181,7 @@ export const connectPlaidTool = {
         accountName,
         connectUrl,
         timeout: formatDuration(timeoutMs),
-        security: "PKCE enabled (S256)",
+        security: pkceEnabled ? "PKCE enabled (S256)" : "Local OAuth (no PKCE)",
         instructions: [
           "1. Open the URL below in your browser",
           "2. Complete the Plaid Link authentication",
@@ -196,10 +192,10 @@ export const connectPlaidTool = {
 
       // Log the initiation
       api.logger?.info?.(
-        `Plaid OAuth initiated: session=${sessionId}, mode=${modeSelection.mode}, pkce=S256`,
+        `Plaid OAuth initiated: session=${sessionId}, mode=${modeSelection.mode}, pkce=${pkceEnabled ? "S256" : "disabled"}`,
       )
 
-      // Return with PKCE pair for polling
+      // Return with PKCE info for polling (only for Relay mode)
       return {
         content: [
           {
@@ -208,11 +204,13 @@ export const connectPlaidTool = {
               {
                 machineReadable,
                 humanReadable,
-                // Include PKCE info for polling (not exposed to user)
-                _pkce: {
-                  codeVerifier: pkcePair.codeVerifier,
-                  codeChallengeMethod: pkcePair.codeChallengeMethod,
-                },
+                // Include PKCE info for polling (only for Relay mode)
+                ...(pkcePair && {
+                  _pkce: {
+                    codeVerifier: pkcePair.codeVerifier,
+                    codeChallengeMethod: pkcePair.codeChallengeMethod,
+                  },
+                }),
               },
               null,
               2,
@@ -261,25 +259,39 @@ export const connectPlaidTool = {
 /**
  * Poll for credential completion using PKCE and long-polling
  *
+ * Note: Only Relay mode is supported for automatic credential polling.
+ * Direct mode requires manual credential handling via the Connect service UI.
+ *
  * @param sessionId - Session ID from initConnectSession
- * @param codeVerifier - PKCE code verifier
- * @param mode - Connection mode
- * @param publicUrl - Public URL for direct mode
+ * @param codeVerifier - PKCE code verifier (required for Relay mode)
+ * @param mode - Connection mode (only 'relay' supported for auto-polling)
+ * @param _publicUrl - Public URL for direct mode (unused, kept for API compatibility)
  * @param timeout - Total timeout in milliseconds
  * @returns Credential data if successful, null if timeout
+ * @throws Error if called with Direct mode (not supported)
  */
 export async function pollForPlaidCredential(
   sessionId: string,
-  codeVerifier: string,
+  codeVerifier: string | undefined,
   mode: "direct" | "relay",
-  publicUrl: string | undefined,
+  _publicUrl: string | undefined,
   timeout: number = DEFAULT_OAUTH_TIMEOUT,
 ): Promise<{ publicToken: string; provider: string; metadata?: string } | null> {
-  const startTime = Date.now()
+  // Direct mode does not support automatic credential polling
+  // The local Connect service does not have /api/connect/* endpoints
+  if (mode === "direct") {
+    throw new Error(
+      "Direct mode does not support automatic credential polling. " +
+        "Please complete the OAuth flow in your browser and manually configure the account.",
+    )
+  }
 
-  // Determine relay URL based on mode
-  const relayUrl =
-    mode === "direct" && publicUrl ? publicUrl : "https://relay.firela.io"
+  if (!codeVerifier) {
+    throw new Error("codeVerifier is required for Relay mode")
+  }
+
+  const startTime = Date.now()
+  const relayUrl = "https://relay.firela.io"
 
   // Use long-polling with retries until total timeout
   while (Date.now() - startTime < timeout) {
