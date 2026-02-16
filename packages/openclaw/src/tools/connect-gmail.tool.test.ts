@@ -20,7 +20,7 @@ describe("connectGmailTool", () => {
     expect(connectGmailTool.name).toBe("connect_gmail")
     expect(connectGmailTool.label).toBe("Connect Gmail Account")
     expect(connectGmailTool.description).toBe(
-      "Connect Gmail account using Device Code Flow (RFC 8628) for OpenClaw",
+      "Connect Gmail account via OAuth. Default: Relay mode (browser-based). Use directMode=true for Device Code Flow (requires own credentials).",
     )
   })
 
