@@ -230,26 +230,26 @@ async function pollForCompletion(
 
     if (session.provider === "plaid") {
       if (session.mode === "direct" && publicUrl && !session.codeVerifier) {
-        // Direct mode: Poll local Connect service (no PKCE)
-        const pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
-
-        const response = await fetch(pollUrl, {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        })
-
-        if (response.ok) {
-          const data = (await response.json()) as {
-            accessToken?: string
-            itemId?: string
-          }
-          if (data.accessToken) {
-            credential = {
-              accessToken: data.accessToken,
-              itemId: data.itemId,
-            }
-          }
-        }
+        // Direct mode does not support automatic credential polling
+        // The local Connect service does not have /api/connect/* endpoints
+        // See ADR-007: Direct Mode Manual Completion for OAuth
+        logger.warn?.(
+          `Direct mode session ${sessionId} does not support automatic polling. ` +
+            "User must manually complete OAuth and configure the account."
+        )
+        await completeSession(
+          api,
+          sessionId,
+          "failed",
+          undefined,
+          {
+            code: "DIRECT_MODE_UNSUPPORTED",
+            message:
+              "Direct mode does not support automatic credential polling. " +
+              "Please complete the OAuth flow in your browser and manually configure the account.",
+          },
+        )
+        return
       } else {
         // Relay mode: Use PKCE-enabled retrieval
         if (!session.codeVerifier) {
