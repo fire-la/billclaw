@@ -34,6 +34,7 @@ interface OAuthSession {
   accountName?: string
   status: "pending" | "completed" | "failed" | "cancelled" | "timeout"
   pollInterval?: NodeJS.Timeout
+  timeoutId?: NodeJS.Timeout // Timeout handler for cleanup
   deviceCode?: string // For Gmail Device Code Flow
   codeVerifier?: string // PKCE code verifier (Relay mode only)
 }
@@ -193,8 +194,8 @@ export async function startOAuthSession(
     DEFAULT_POLL_INTERVAL,
   )
 
-  // Set timeout handler
-  setTimeout(
+  // Set timeout handler and store ID for cleanup
+  session.timeoutId = setTimeout(
     () => handleTimeout(api, sessionId),
     timeout,
   )
@@ -412,6 +413,12 @@ async function completeSession(
   if (session.pollInterval) {
     clearInterval(session.pollInterval)
     session.pollInterval = undefined
+  }
+
+  // Clear timeout handler
+  if (session.timeoutId) {
+    clearTimeout(session.timeoutId)
+    session.timeoutId = undefined
   }
 
   // Update session status
