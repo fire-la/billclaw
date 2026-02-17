@@ -10,8 +10,7 @@
  * - Signature verification (via Core security layer)
  */
 
-import type { Request, Response } from "express"
-import type { Router } from "express"
+import express, { type Request, type Router, type Response } from "express"
 import {
   WebhookProcessor,
   createWebhookSecurity,
@@ -186,7 +185,6 @@ function coreToExpressResponse(response: {
  * Create webhook routes
  */
 export function createWebhookRoutes(): Router {
-  const express = require("express")
   const router = express.Router()
 
   // POST /webhook/plaid
