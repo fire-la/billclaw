@@ -16,6 +16,7 @@ import {
   retrieveCredential,
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
+import { formatUserCode } from "@firela/billclaw-core/utils"
 
 /**
  * Hardcoded relay URL
@@ -429,17 +430,6 @@ async function saveGmailAccount(
   console.log(`  ID: ${account.id}`)
   console.log(`  Type: ${account.type}`)
   console.log(`  Email: ${emailAddress}`)
-}
-
-/**
- * Format user code for display (XXXX-XXXX)
- */
-function formatUserCode(code: string): string {
-  // Google's user codes are typically 8 characters
-  if (code.length === 8) {
-    return `${code.slice(0, 4)}-${code.slice(4)}`
-  }
-  return code
 }
 
 /**
