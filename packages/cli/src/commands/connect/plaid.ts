@@ -20,6 +20,7 @@ import {
   retrieveCredential,
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
+import { RELAY_URL } from "@firela/billclaw-core/connection"
 /**
  * Default OAuth timeout in milliseconds (10 minutes)
  */
@@ -85,8 +86,7 @@ export async function runPlaidConnect(
     const pkcePair = generatePKCEPair("S256", 128)
     pkceCodeVerifier = pkcePair.codeVerifier
 
-    const relayUrl = "https://relay.firela.io"
-    sessionId = await initConnectSession(relayUrl, pkcePair)
+    sessionId = await initConnectSession(RELAY_URL, pkcePair)
     connectUrl = `https://connect.firela.io/plaid?session=${sessionId}`
     console.log("Opening Plaid Link via Firela Relay (PKCE enabled)...")
   }
@@ -219,12 +219,11 @@ async function pollForCredential(
     throw new Error("code_verifier required for Relay mode")
   }
 
-  const relayUrl = "https://relay.firela.io"
   const startTime = Date.now()
 
   while (Date.now() - startTime < timeout) {
     try {
-      const credential = await retrieveCredential(relayUrl, {
+      const credential = await retrieveCredential(RELAY_URL, {
         sessionId,
         codeVerifier,
         wait: true,
@@ -233,7 +232,7 @@ async function pollForCredential(
 
       if (credential?.public_token) {
         // Confirm deletion (optional cleanup)
-        await confirmCredentialDeletion(relayUrl, sessionId).catch(() => {
+        await confirmCredentialDeletion(RELAY_URL, sessionId).catch(() => {
           // Ignore deletion errors
         })
 

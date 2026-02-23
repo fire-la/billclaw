@@ -17,11 +17,7 @@ import {
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
 import { formatUserCode } from "@firela/billclaw-core/utils"
-
-/**
- * Hardcoded relay URL
- */
-const RELAY_URL = "https://relay.firela.io"
+import { RELAY_URL } from "@firela/billclaw-core/connection"
 
 /**
  * Long-polling timeout in seconds
