@@ -18,6 +18,7 @@ import {
   retrieveCredential,
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
+import { RELAY_URL } from "@firela/billclaw-core/connection"
 
 // Re-export types for consumers
 export type { OAuthCompletionResult, OAuthCompletionCallback }
@@ -158,8 +159,7 @@ export async function startOAuthSession(
       const pkcePair = generatePKCEPair("S256", 128)
       codeVerifier = pkcePair.codeVerifier
 
-      const relayUrl = "https://relay.firela.io"
-      sessionId = await initConnectSession(relayUrl, pkcePair)
+      sessionId = await initConnectSession(RELAY_URL, pkcePair)
       connectUrl = `https://connect.firela.io/plaid?session=${sessionId}`
 
       logger.info?.(`OAuth session started: ${sessionId} (plaid, relay mode, PKCE enabled)`)
@@ -257,7 +257,7 @@ async function pollForCompletion(
           throw new Error("No code_verifier for Relay mode Plaid session")
         }
 
-        const relayUrl = "https://relay.firela.io"
+        const relayUrl = RELAY_URL
 
         try {
           const credData = await retrieveCredential(relayUrl, {
@@ -268,7 +268,7 @@ async function pollForCompletion(
           })
 
           if (credData?.public_token) {
-            await confirmCredentialDeletion(relayUrl, sessionId).catch(() => {
+            await confirmCredentialDeletion(RELAY_URL, sessionId).catch(() => {
               // Ignore deletion errors
             })
 

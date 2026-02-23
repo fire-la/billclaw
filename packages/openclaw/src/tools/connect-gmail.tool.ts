@@ -17,6 +17,7 @@ import {
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
 import { formatUserCode } from "@firela/billclaw-core/utils"
+import { RELAY_URL } from "@firela/billclaw-core/connection"
 
 /**
  * Polling interval for Device Code Flow in milliseconds
@@ -32,11 +33,6 @@ const DEFAULT_OAUTH_TIMEOUT = 10 * 60 * 1000
  * Long-polling timeout in seconds for relay mode
  */
 const LONG_POLL_TIMEOUT = 30
-
-/**
- * Hardcoded relay URL (same as Plaid)
- */
-const RELAY_URL = "https://relay.firela.io"
 
 /**
  * Format time duration for display

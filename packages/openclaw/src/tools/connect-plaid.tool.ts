@@ -17,6 +17,7 @@ import {
   retrieveCredential,
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
+import { RELAY_URL } from "@firela/billclaw-core/connection"
 
 /**
  * Default OAuth timeout in milliseconds (10 minutes)
@@ -146,9 +147,8 @@ export const connectPlaidTool = {
         modeDescription = "Direct (your Connect service)"
       } else {
         // Relay mode: PKCE required, use Firela Relay
-        const relayUrl = "https://relay.firela.io"
         pkcePair = generatePKCEPair("S256", 128)
-        sessionId = await initConnectSession(relayUrl, pkcePair)
+        sessionId = await initConnectSession(RELAY_URL, pkcePair)
         connectUrl = `https://connect.firela.io/plaid?session=${sessionId}`
         modeDescription = "Relay (Firela Relay service)"
       }
@@ -291,12 +291,11 @@ export async function pollForPlaidCredential(
   }
 
   const startTime = Date.now()
-  const relayUrl = "https://relay.firela.io"
 
   // Use long-polling with retries until total timeout
   while (Date.now() - startTime < timeout) {
     try {
-      const credential = await retrieveCredential(relayUrl, {
+      const credential = await retrieveCredential(RELAY_URL, {
         sessionId,
         codeVerifier,
         wait: true,
@@ -305,7 +304,7 @@ export async function pollForPlaidCredential(
 
       if (credential?.public_token) {
         // Confirm deletion (optional cleanup)
-        await confirmCredentialDeletion(relayUrl, sessionId).catch(() => {
+        await confirmCredentialDeletion(RELAY_URL, sessionId).catch(() => {
           // Ignore deletion errors
         })
 
