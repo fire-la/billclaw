@@ -40,7 +40,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Centralize formatUserCode utility
+- [x] 02-01: Centralize formatUserCode utility
 - [ ] 02-02: Centralize RELAY_URL configuration
 
 ### Phase 3: Test Coverage
@@ -73,6 +73,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Dependency Unification | 2/2 | Complete | 2026-02-23 |
-| 2. Code Deduplication | 0/2 | Not started | - |
+| 2. Code Deduplication | 1/2 | In progress | - |
 | 3. Test Coverage | 0/3 | Not started | - |
 | 4. Relay Reconnection | 0/2 | Not started | - |
