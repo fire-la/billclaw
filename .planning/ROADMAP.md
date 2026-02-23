@@ -16,7 +16,7 @@ None
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Dependency Unification** - Unify connect package dependency versions
+- [x] **Phase 1: Dependency Unification** - Unify connect package dependency versions
 - [ ] **Phase 2: Code Deduplication** - Eliminate duplicate code across packages
 - [ ] **Phase 3: Test Coverage** - Increase test coverage for critical paths
 - [ ] **Phase 4: Relay Reconnection** - Improve Relay WebSocket reconnection mechanism
@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01: Update TypeScript from 5.3.3 to 5.8.0
-- [ ] 01-02: Update Vitest from 1.1.0 to 3.0.0
+- [x] 01-02: Update Vitest from 1.1.0 to 3.0.0
 
 ### Phase 2: Code Deduplication
 **Goal**: Eliminate duplicate code (formatUserCode, RELAY_URL hardcoded in 25+ locations)
@@ -72,7 +72,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Dependency Unification | 1/2 | In progress | - |
+| 1. Dependency Unification | 2/2 | Complete | 2026-02-23 |
 | 2. Code Deduplication | 0/2 | Not started | - |
 | 3. Test Coverage | 0/3 | Not started | - |
 | 4. Relay Reconnection | 0/2 | Not started | - |
