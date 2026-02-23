@@ -29,3 +29,6 @@ export type {
   ConnectionModeSelectionResult,
   HealthCheckResult,
 } from "./types.js"
+
+// Constants
+export { RELAY_URL } from "./constants.js"
