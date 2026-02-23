@@ -16,6 +16,7 @@ import {
   retrieveCredential,
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
+import { formatUserCode } from "@firela/billclaw-core/utils"
 
 /**
  * Polling interval for Device Code Flow in milliseconds
@@ -36,17 +37,6 @@ const LONG_POLL_TIMEOUT = 30
  * Hardcoded relay URL (same as Plaid)
  */
 const RELAY_URL = "https://relay.firela.io"
-
-/**
- * Format user code for display (XXXX-XXXX)
- */
-function formatUserCode(code: string): string {
-  // Google's user codes are typically 8 characters
-  if (code.length === 8) {
-    return `${code.slice(0, 4)}-${code.slice(4)}`
-  }
-  return code
-}
 
 /**
  * Format time duration for display
