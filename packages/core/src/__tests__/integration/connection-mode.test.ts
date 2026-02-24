@@ -15,7 +15,6 @@ import {
   canUpgradeMode,
   getBestAvailableMode,
 } from "../../connection/mode-selector.js"
-import type { ConnectionPurpose } from "../../connection/types.js"
 
 describe("Connection Mode Integration", () => {
   const helpers = new IntegrationTestHelpers()
