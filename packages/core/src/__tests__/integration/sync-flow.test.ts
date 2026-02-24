@@ -5,12 +5,8 @@
  * Uses temp directories for file system operations.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import * as path from "node:path"
-import {
-  IntegrationTestHelpers,
-  PlaidFixtures,
-} from "./setup.js"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { IntegrationTestHelpers } from "./setup.js"
 import {
   readTransactions,
   writeTransactions,
