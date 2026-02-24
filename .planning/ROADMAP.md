@@ -47,10 +47,10 @@ Plans:
 **Goal**: Increase test coverage for critical paths (CLI: 8.7%→80%, connect: 20%→80%)
 **Depends on**: Phase 2
 **Research**: Unlikely (internal testing, established patterns)
-**Plans**: 3 plans
+**Plans**: 3 plans (1/3 complete)
 
 Plans:
-- [ ] 03-01: Add CLI command tests
+- [x] 03-01: Add CLI command tests
 - [ ] 03-02: Add connect package route tests
 - [ ] 03-03: Add integration tests for critical paths
 
@@ -74,5 +74,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Dependency Unification | 2/2 | Complete | 2026-02-23 |
 | 2. Code Deduplication | 2/2 | Complete | 2026-02-24 |
-| 3. Test Coverage | 0/3 | Not started | - |
+| 3. Test Coverage | 1/3 | In progress | - |
 | 4. Relay Reconnection | 0/2 | Not started | - |
