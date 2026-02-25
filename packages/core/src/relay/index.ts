@@ -37,6 +37,8 @@ export {
   createRelayClient,
 } from "./client.js"
 
+export { calculateBackoffDelay } from "./backoff.js"
+
 export type {
   RelayOAuthOptions,
   RelayOAuthResult,
