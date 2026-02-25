@@ -44,6 +44,5 @@ tmp
 
 # Documentation submodule (managed separately)
 billclaw-docs
-.claude
 CLAUDE.md
 docs
