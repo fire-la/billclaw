@@ -1,16 +1,11 @@
 /**
  * Tests for Relay WebSocket client
- *
- * Tests reconnection behavior with mocked WebSocket and fake timers.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { RelayWebSocketClient } from "./client.js"
 import type { RuntimeContext, Logger, ConfigProvider } from "../runtime/types.js"
 
-import { WebSocket } from "ws"
-
-// Create mock context
 function createMockContext(): RuntimeContext {
   const logger: Logger = {
     debug: vi.fn(),
@@ -82,9 +77,7 @@ describe("RelayWebSocketClient", () => {
 
   describe("manual disconnect", () => {
     it("should not trigger reconnect when manually disconnected", () => {
-      // Manually disconnect without connecting
       client.disconnect()
-
       const stats = client.getStats()
       expect(stats.state).toBe("closed")
     })
@@ -94,24 +87,18 @@ describe("RelayWebSocketClient", () => {
     it("should register and unregister event handlers", () => {
       const eventHandler = vi.fn()
       client.onEvent(eventHandler)
-
-      // Handler should be registered
       client.offEvent(eventHandler)
-
-      // Handler should be unregistered
     })
 
     it("should register and unregister state change handlers", () => {
       const stateHandler = vi.fn()
       client.onStateChange(stateHandler)
-
       client.offStateChange(stateHandler)
     })
 
     it("should register and unregister error handlers", () => {
       const errorHandler = vi.fn()
       client.onError(errorHandler)
-
       client.offError(errorHandler)
     })
   })
@@ -119,11 +106,11 @@ describe("RelayWebSocketClient", () => {
   describe("stats", () => {
     it("should track connection stats", () => {
       const stats = client.getStats()
-
-        expect(stats.state).toBe("disconnected")
-        expect(stats.reconnectAttempts).toBe(0)
-        expect(stats.eventsReceived).toBe(0)
-        expect(stats.eventsAcked).toBe(0)
+      expect(stats.state).toBe("disconnected")
+      expect(stats.reconnectAttempts).toBe(0)
+      expect(stats.eventsReceived).toBe(0)
+      expect(stats.eventsAcked).toBe(0)
+      expect(stats.eventsRecovered).toBe(0)
     })
   })
 })
