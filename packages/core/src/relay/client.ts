@@ -20,6 +20,7 @@ import type {
   RelayErrorHandler,
 } from "./types.js"
 import { MessageDirectionSchema } from "./types.js"
+import { calculateBackoffDelay } from "./backoff.js"
 
 /**
  * WebSocket client for Firela Relay service
@@ -316,10 +317,11 @@ export class RelayWebSocketClient {
 
     this.clearReconnectTimeout()
 
-    // Calculate delay with exponential backoff
-    const delay = Math.min(
-      this.config.reconnectDelay * Math.pow(2, this.stats.reconnectAttempts),
+    // Calculate delay using Full Jitter backoff
+    const delay = calculateBackoffDelay(
+      this.config.reconnectDelay,
       this.config.maxReconnectDelay,
+      this.stats.reconnectAttempts
     )
 
     this.context.logger.debug(`Relay client: scheduling reconnect in ${delay}ms`)
