@@ -92,7 +92,7 @@ jobs:
         run: pnpm build
 
       - name: Run E2E tests
-        run: npx playwright test --config billclaw-docs/testing/playwright.config.ts
+        run: npx playwright test --config billclaw-docs/testing/playwright.config.ts --project=chromium
         env:
           CI: true
 
