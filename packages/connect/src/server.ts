@@ -39,9 +39,16 @@ async function startServer() {
     ? storageBase.replace("~", process.env.HOME || "")
     : storageBase
 
-  const PORT = connectConfig.port
-  const HOST = connectConfig.host
-  const PUBLIC_URL = connectConfig.publicUrl || `http://${HOST}:${PORT}`
+  // 12-factor app: environment variables take precedence, then config, then defaults
+  // This allows the server to run without config file in CI/container environments
+  const PORT =
+    connectConfig.port || parseInt(process.env.PORT || "4456", 10)
+  const HOST =
+    connectConfig.host || process.env.HOST || "localhost"
+  const PUBLIC_URL =
+    connectConfig.publicUrl ||
+    process.env.PUBLIC_URL ||
+    `http://${HOST}:${PORT}`
   const tls = connectConfig.tls
 
   const app = express()
