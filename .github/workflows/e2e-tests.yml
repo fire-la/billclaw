@@ -97,7 +97,9 @@ jobs:
         if: failure()
         run: |
           echo "Running Healer Agent to diagnose and fix failed tests..."
-          npx playwright test --config billclaw-docs/testing/playwright.config.ts --healer || true
+          echo "Note: Healer requires Claude Code CLI with Agent support"
+          echo "Install Claude Code CLI and run: claude agent playwright-test-healer"
+          echo "For now, skipping auto-heal in CI - check the test results manually"
         env:
           CI: true
           # Claude Code CLI Configuration (uses 智谱 AI endpoint)
