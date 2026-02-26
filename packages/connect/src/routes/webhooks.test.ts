@@ -88,7 +88,7 @@ describe("Webhook Routes", () => {
       // The test endpoint should always succeed
       const response = await request(app)
         .post("/webhook/test")
-        .send(null)
+        .send({})
 
       expect(response.status).toBe(200)
     })

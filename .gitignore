@@ -34,10 +34,17 @@ pnpm-debug.log*
 coverage
 *.lcov
 
-# Playwright
+# Playwright outputs
 playwright-report/
 test-results/
 playwright/.cache/
+.playwright-mcp
+
+# Automated Testing (managed in billclaw-docs submodule)
+# These are symlinks pointing to billclaw-docs/testing/
+/tests
+/specs
+/playwright.config.ts
 
 # Misc
 .cache
