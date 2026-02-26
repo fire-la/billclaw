@@ -54,7 +54,6 @@ tmp
 # ClawHub
 .clawhub/
 
-# Documentation submodule (managed separately)
-billclaw-docs
+# Documentation (root level docs, not submodule)
 CLAUDE.md
-docs
+docs/
