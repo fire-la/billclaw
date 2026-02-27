@@ -60,6 +60,7 @@
     }
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.18",
     "@cloudflare/workers-types": "^4.20250214.0",
     "@hono/zod-validator": "^0.4.3",
     "@vitest/coverage-v8": "^4.0.18",
