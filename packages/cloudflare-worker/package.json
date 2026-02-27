@@ -1,0 +1,59 @@
+{
+  "name": "@firela/billclaw-worker",
+  "version": "0.0.1",
+  "description": "BillClaw Cloudflare Worker - Self-hosted financial data service",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest",
+    "lint": "oxlint",
+    "format": "oxfmt src/",
+    "format:write": "oxfmt -w src/",
+    "clean": "rm -rf dist",
+    "cf-typegen": "wrangler types"
+  },
+  "keywords": [
+    "financial-data",
+    "plaid",
+    "cloudflare-workers",
+    "hono",
+    "self-hosted"
+  ],
+  "author": "fire-la",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fire-la/billclaw.git",
+    "directory": "packages/cloudflare-worker"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "@hono/zod-validator": "^0.4.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "oxfmt": "^0.1.0",
+    "oxlint": "^0.15.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0",
+    "wrangler": "^3.109.0"
+  },
+  "dependencies": {
+    "@firela/billclaw-core": "workspace:*",
+    "hono": "^4.7.0",
+    "zod": "^3.25.0"
+  }
+}

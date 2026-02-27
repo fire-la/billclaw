@@ -1,0 +1,37 @@
+# BillClaw Cloudflare Worker configuration
+# https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "billclaw-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Build configuration
+[build]
+command = "pnpm build"
+
+# D1 Database binding (configured in 06-03)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "billclaw-db"
+# database_id = "placeholder"
+
+# KV Namespace binding for config/rate limiting (configured in 06-03)
+# [[kv_namespaces]]
+# binding = "CONFIG"
+# id = "placeholder"
+
+# Environment variables (secrets should use wrangler secret put)
+# [vars]
+# PLAID_ENV = "sandbox"
+
+# Development settings
+[dev]
+port = 8787
+local_protocol = "http"
+
+# Production settings
+# [env.production]
+# routes = [
+#   { pattern = "billclaw.example.com/*", zone_name = "example.com" }
+# ]
