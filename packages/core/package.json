@@ -11,6 +11,14 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "import": "./dist/storage/index.js"
+    },
+    "./storage/file": {
+      "types": "./dist/storage/file-adapter.d.ts",
+      "import": "./dist/storage/file-adapter.js"
+    },
     "./errors": {
       "types": "./dist/errors/index.d.ts",
       "import": "./dist/errors/index.js"
