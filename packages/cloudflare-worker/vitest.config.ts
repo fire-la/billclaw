@@ -1,16 +1,13 @@
-import { defineConfig } from "vitest/config"
+import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config"
 
-export default defineConfig({
+export default defineWorkersConfig({
   test: {
-    globals: true,
-    environment: "node",
-    include: ["src/**/*.test.ts"],
-    exclude: ["node_modules", "dist"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "json", "html", "lcov"],
-      include: ["src/**/*.ts"],
-      exclude: ["node_modules", "dist", "**/*.test.ts"],
+    poolOptions: {
+      workers: {
+        wrangler: { configPath: "./wrangler.toml" },
+      },
     },
+    include: ["test/**/*.test.ts", "test/**/*.spec.ts"],
+    exclude: ["node_modules", "dist"],
   },
 })
