@@ -19,6 +19,10 @@
       "types": "./dist/storage/file-adapter.d.ts",
       "import": "./dist/storage/file-adapter.js"
     },
+    "./storage/d1": {
+      "types": "./dist/storage/d1-adapter.d.ts",
+      "import": "./dist/storage/d1-adapter.js"
+    },
     "./errors": {
       "types": "./dist/errors/index.d.ts",
       "import": "./dist/errors/index.js"
