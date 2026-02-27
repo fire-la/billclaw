@@ -9,6 +9,8 @@ import type { Logger } from "../errors/errors.js"
 export type { Logger } from "../errors/errors.js"
 import type { BillclawConfig, StorageConfig } from "../models/config.js"
 export type { BillclawConfig, StorageConfig } from "../models/config.js"
+import type { StorageAdapter } from "../storage/types.js"
+export type { StorageAdapter } from "../storage/types.js"
 
 /**
  * Configuration provider - loads and provides configuration
@@ -81,6 +83,16 @@ export interface RuntimeContext {
    * Event emitter
    */
   events?: EventEmitter
+
+  /**
+   * Storage adapter for data persistence
+   *
+   * If not provided, core throws a clear error for storage-dependent operations.
+   * Adapters (CLI, OpenClaw) choose appropriate implementation:
+   * - CLI: Uses FileStorageAdapter by default
+   * - Workers: Uses D1StorageAdapter explicitly
+   */
+  storage?: StorageAdapter
 
   /**
    * Platform-specific utilities
