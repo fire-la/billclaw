@@ -32,7 +32,7 @@ export interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement
   first<T = unknown>(colName?: string): Promise<T | null>
   run(): Promise<D1Result>
-  all<T = unknown>(): Promise<D1Result<T[]>>
+  all<T = unknown>(): Promise<D1Result<T>>
   raw<T = unknown>(): Promise<T[]>
 }
 
@@ -47,6 +47,48 @@ export interface D1Result<T = unknown> {
     rows_read: number
     rows_written: number
   }
+}
+
+/**
+ * D1 row types for database results
+ */
+interface D1TransactionRow {
+  id: string
+  account_id: string
+  date: string
+  amount: number
+  currency: string
+  merchant_name: string | null
+  category: string | null
+  payment_channel: string | null
+  pending: number
+  plaid_transaction_id: string
+  created_at: string
+}
+
+interface D1SyncStateRow {
+  sync_id: string
+  account_id: string
+  started_at: string
+  completed_at: string | null
+  status: string
+  transactions_added: number
+  transactions_updated: number
+  cursor: string | null
+  error: string | null
+  requires_reauth: number
+}
+
+interface D1AccountRow {
+  id: string
+  type: string
+  name: string
+  plaid_access_token: string | null
+  plaid_item_id: string | null
+  gmail_email: string | null
+  gmail_refresh_token: string | null
+  created_at: string
+  last_sync: string | null
 }
 
 /**
@@ -98,7 +140,7 @@ export class D1StorageAdapter implements StorageAdapter {
     // Read and execute the schema
     // In production, schema should be applied via D1 migrations
     // This method is provided for development/testing purposes
-    const schema = await this.getSchema()
+    const schema = this.getSchema()
     await this.db.exec(schema)
   }
 
@@ -108,80 +150,375 @@ export class D1StorageAdapter implements StorageAdapter {
    * This returns the schema that should be applied to the D1 database.
    * In production, use wrangler d1 migrations instead.
    */
-  private async getSchema(): Promise<string> {
-    // Schema is defined in d1-schema.sql
-    // This is a placeholder - actual implementation should read the file
-    // or embed the schema as a constant
+  private getSchema(): string {
+    // Embedded schema for development/testing
+    // See d1-schema.sql for the canonical version
     return `
-      -- Schema will be applied via wrangler d1 migrations
-      -- See d1-schema.sql for the full schema
+      -- Accounts table
+      CREATE TABLE IF NOT EXISTS accounts (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        plaid_access_token TEXT,
+        plaid_item_id TEXT,
+        gmail_email TEXT,
+        gmail_refresh_token TEXT,
+        created_at TEXT NOT NULL,
+        last_sync TEXT
+      );
+
+      -- Transactions table
+      CREATE TABLE IF NOT EXISTS transactions (
+        id TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'USD',
+        merchant_name TEXT,
+        category TEXT,
+        payment_channel TEXT,
+        pending INTEGER NOT NULL DEFAULT 0,
+        plaid_transaction_id TEXT UNIQUE,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+      );
+
+      -- Sync state table
+      CREATE TABLE IF NOT EXISTS sync_state (
+        sync_id TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        status TEXT NOT NULL,
+        transactions_added INTEGER NOT NULL DEFAULT 0,
+        transactions_updated INTEGER NOT NULL DEFAULT 0,
+        cursor TEXT,
+        error TEXT,
+        requires_reauth INTEGER DEFAULT 0,
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+      );
+
+      -- Indexes
+      CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
+      CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions(account_id, date);
+      CREATE INDEX IF NOT EXISTS idx_sync_state_account_id ON sync_state(account_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_state_started_at ON sync_state(started_at);
     `
   }
 
+  // ============================================================================
+  // Transaction Operations
+  // ============================================================================
+
   async getTransactions(
-    _accountId: string,
-    _year: number,
-    _month: number,
+    accountId: string,
+    year: number,
+    month: number,
   ): Promise<Transaction[]> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.getTransactions not implemented yet")
+    // Calculate date range for the month
+    const startDate = `${year}-${month.toString().padStart(2, "0")}-01`
+    const nextMonth = month === 12 ? 1 : month + 1
+    const nextYear = month === 12 ? year + 1 : year
+    const endDate = `${nextYear}-${nextMonth.toString().padStart(2, "0")}-01`
+
+    const result = await this.db
+      .prepare(
+        `SELECT * FROM transactions
+         WHERE account_id = ? AND date >= ? AND date < ?
+         ORDER BY date DESC`,
+      )
+      .bind(accountId, startDate, endDate)
+      .all<D1TransactionRow>()
+
+    return result.results.map(this.mapTransactionRow)
   }
 
   async saveTransactions(
-    _accountId: string,
+    accountId: string,
     _year: number,
     _month: number,
-    _transactions: Transaction[],
+    transactions: Transaction[],
   ): Promise<void> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.saveTransactions not implemented yet")
+    if (transactions.length === 0) return
+
+    // Delete existing transactions for this account in the date range
+    const dates = transactions.map((t) => t.date)
+    const minDate = dates.sort()[0]
+    const maxDate = dates.sort()[dates.length - 1]
+
+    await this.db
+      .prepare(
+        `DELETE FROM transactions
+         WHERE account_id = ? AND date >= ? AND date <= ?`,
+      )
+      .bind(accountId, minDate, maxDate)
+      .run()
+
+    // Insert new transactions
+    const statements = transactions.map((txn) =>
+      this.db
+        .prepare(
+          `INSERT INTO transactions
+           (id, account_id, date, amount, currency, merchant_name, category,
+            payment_channel, pending, plaid_transaction_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          txn.transactionId,
+          txn.accountId,
+          txn.date,
+          txn.amount,
+          txn.currency,
+          txn.merchantName || null,
+          txn.category ? JSON.stringify(txn.category) : null,
+          txn.paymentChannel || null,
+          txn.pending ? 1 : 0,
+          txn.plaidTransactionId,
+          txn.createdAt,
+        ),
+    )
+
+    await this.db.batch(statements)
   }
 
   async appendTransactions(
     _accountId: string,
     _year: number,
     _month: number,
-    _transactions: Transaction[],
+    transactions: Transaction[],
   ): Promise<{ added: number; updated: number }> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.appendTransactions not implemented yet")
+    if (transactions.length === 0) {
+      return { added: 0, updated: 0 }
+    }
+
+    let added = 0
+    let updated = 0
+
+    // Process each transaction with upsert logic
+    for (const txn of transactions) {
+      // Check if transaction exists
+      const existing = await this.db
+        .prepare(
+          `SELECT id FROM transactions WHERE plaid_transaction_id = ?`,
+        )
+        .bind(txn.plaidTransactionId)
+        .first()
+
+      if (existing) {
+        // Update existing transaction
+        await this.db
+          .prepare(
+            `UPDATE transactions SET
+             date = ?, amount = ?, currency = ?, merchant_name = ?,
+             category = ?, payment_channel = ?, pending = ?
+             WHERE plaid_transaction_id = ?`,
+          )
+          .bind(
+            txn.date,
+            txn.amount,
+            txn.currency,
+            txn.merchantName || null,
+            txn.category ? JSON.stringify(txn.category) : null,
+            txn.paymentChannel || null,
+            txn.pending ? 1 : 0,
+            txn.plaidTransactionId,
+          )
+          .run()
+        updated++
+      } else {
+        // Insert new transaction
+        await this.db
+          .prepare(
+            `INSERT INTO transactions
+             (id, account_id, date, amount, currency, merchant_name, category,
+              payment_channel, pending, plaid_transaction_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(
+            txn.transactionId,
+            txn.accountId,
+            txn.date,
+            txn.amount,
+            txn.currency,
+            txn.merchantName || null,
+            txn.category ? JSON.stringify(txn.category) : null,
+            txn.paymentChannel || null,
+            txn.pending ? 1 : 0,
+            txn.plaidTransactionId,
+            txn.createdAt,
+          )
+          .run()
+        added++
+      }
+    }
+
+    return { added, updated }
   }
 
-  async getSyncStates(_accountId: string): Promise<SyncState[]> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.getSyncStates not implemented yet")
+  // ============================================================================
+  // Sync State Operations
+  // ============================================================================
+
+  async getSyncStates(accountId: string): Promise<SyncState[]> {
+    const result = await this.db
+      .prepare(
+        `SELECT * FROM sync_state
+         WHERE account_id = ?
+         ORDER BY started_at DESC`,
+      )
+      .bind(accountId)
+      .all<D1SyncStateRow>()
+
+    return result.results.map(this.mapSyncStateRow)
   }
 
-  async getLatestSyncState(_accountId: string): Promise<SyncState | null> {
-    // TODO: Implement in 06-02
-    throw new Error(
-      "D1StorageAdapter.getLatestSyncState not implemented yet",
-    )
+  async getLatestSyncState(accountId: string): Promise<SyncState | null> {
+    const row = await this.db
+      .prepare(
+        `SELECT * FROM sync_state
+         WHERE account_id = ?
+         ORDER BY started_at DESC
+         LIMIT 1`,
+      )
+      .bind(accountId)
+      .first<D1SyncStateRow>()
+
+    return row ? this.mapSyncStateRow(row) : null
   }
 
-  async saveSyncState(_state: SyncState): Promise<void> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.saveSyncState not implemented yet")
+  async saveSyncState(state: SyncState): Promise<void> {
+    await this.db
+      .prepare(
+        `INSERT OR REPLACE INTO sync_state
+         (sync_id, account_id, started_at, completed_at, status,
+          transactions_added, transactions_updated, cursor, error, requires_reauth)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        state.syncId,
+        state.accountId,
+        state.startedAt,
+        state.completedAt || null,
+        state.status,
+        state.transactionsAdded,
+        state.transactionsUpdated,
+        state.cursor || null,
+        state.error || null,
+        state.requiresReauth ? 1 : 0,
+      )
+      .run()
   }
+
+  // ============================================================================
+  // Account Operations
+  // ============================================================================
 
   async getAccounts(): Promise<AccountRegistry[]> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.getAccounts not implemented yet")
+    const result = await this.db
+      .prepare(`SELECT * FROM accounts ORDER BY created_at`)
+      .all<D1AccountRow>()
+
+    return result.results.map(this.mapAccountRow)
   }
 
-  async getAccount(_accountId: string): Promise<AccountRegistry | null> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.getAccount not implemented yet")
+  async getAccount(accountId: string): Promise<AccountRegistry | null> {
+    const row = await this.db
+      .prepare(`SELECT * FROM accounts WHERE id = ?`)
+      .bind(accountId)
+      .first<D1AccountRow>()
+
+    return row ? this.mapAccountRow(row) : null
   }
 
-  async saveAccount(_account: AccountRegistry): Promise<void> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.saveAccount not implemented yet")
+  async saveAccount(account: AccountRegistry): Promise<void> {
+    // Get existing account to preserve Plaid/Gmail fields
+    const existing = await this.db
+      .prepare(`SELECT * FROM accounts WHERE id = ?`)
+      .bind(account.id)
+      .first<D1AccountRow>()
+
+    // Use UPSERT pattern with INSERT OR REPLACE
+    await this.db
+      .prepare(
+        `INSERT OR REPLACE INTO accounts
+         (id, type, name, plaid_access_token, plaid_item_id,
+          gmail_email, gmail_refresh_token, created_at, last_sync)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        account.id,
+        account.type,
+        account.name,
+        existing?.plaid_access_token || null,
+        existing?.plaid_item_id || null,
+        existing?.gmail_email || null,
+        existing?.gmail_refresh_token || null,
+        account.createdAt,
+        account.lastSync || null,
+      )
+      .run()
   }
 
-  async deleteAccount(_accountId: string): Promise<void> {
-    // TODO: Implement in 06-02
-    throw new Error("D1StorageAdapter.deleteAccount not implemented yet")
+  async deleteAccount(accountId: string): Promise<void> {
+    await this.db
+      .prepare(`DELETE FROM accounts WHERE id = ?`)
+      .bind(accountId)
+      .run()
+  }
+
+  // ============================================================================
+  // Private Helpers
+  // ============================================================================
+
+  /**
+   * Map a D1 transaction row to Transaction type
+   */
+  private mapTransactionRow(row: D1TransactionRow): Transaction {
+    return {
+      transactionId: row.id,
+      accountId: row.account_id,
+      date: row.date,
+      amount: row.amount,
+      currency: row.currency,
+      merchantName: row.merchant_name || "",
+      category: row.category ? JSON.parse(row.category) : [],
+      paymentChannel: row.payment_channel || "",
+      pending: row.pending === 1,
+      plaidTransactionId: row.plaid_transaction_id,
+      createdAt: row.created_at,
+    }
+  }
+
+  /**
+   * Map a D1 sync state row to SyncState type
+   */
+  private mapSyncStateRow(row: D1SyncStateRow): SyncState {
+    return {
+      syncId: row.sync_id,
+      accountId: row.account_id,
+      startedAt: row.started_at,
+      completedAt: row.completed_at || undefined,
+      status: row.status as "running" | "completed" | "failed",
+      transactionsAdded: row.transactions_added,
+      transactionsUpdated: row.transactions_updated,
+      cursor: row.cursor || "",
+      error: row.error || undefined,
+      requiresReauth: row.requires_reauth === 1,
+    }
+  }
+
+  /**
+   * Map a D1 account row to AccountRegistry type
+   */
+  private mapAccountRow(row: D1AccountRow): AccountRegistry {
+    return {
+      id: row.id,
+      type: row.type,
+      name: row.name,
+      createdAt: row.created_at,
+      lastSync: row.last_sync || undefined,
+    }
   }
 }
 
