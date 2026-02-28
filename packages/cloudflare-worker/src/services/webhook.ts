@@ -2,11 +2,12 @@
  * Webhook Service
  *
  * Provides utilities for processing Plaid webhooks.
- * Uses Web Crypto API for HMAC-SHA256 verification.
+ * Uses JWT verification via jose library.
  *
  * @packageDocumentation
  */
 
+import { verifyPlaidWebhookJWT } from "../webhook/verify.js"
 import type { Env } from "../types/env.js"
 
 /**
@@ -55,66 +56,22 @@ export interface WebhookProcessResult {
 }
 
 /**
- * Verify Plaid webhook signature using HMAC-SHA256
+ * Verify Plaid webhook using JWT verification
  *
- * This implementation uses the Web Crypto API which is native to Cloudflare Workers.
- * No Node.js dependencies are required.
+ * Plaid uses JWT-based verification (not HMAC-SHA256).
+ * This delegates to the verifyPlaidWebhookJWT function.
  *
  * @param body - The raw request body as a string
- * @param signature - The Plaid-Signature header value (hex-encoded)
- * @param secret - The Plaid webhook secret (from PLAID_WEBHOOK_SECRET)
- * @returns Whether the signature is valid
+ * @param verificationHeader - The Plaid-Verification header (JWT)
+ * @param env - Worker environment with Plaid credentials
+ * @returns Whether the webhook is valid
  */
 export async function verifyPlaidWebhook(
   body: string,
-  signature: string | null,
-  secret: string,
+  verificationHeader: string | null,
+  env: Env,
 ): Promise<WebhookVerifyResult> {
-  if (!signature) {
-    return { valid: false, error: "Missing Plaid-Signature header" }
-  }
-
-  if (!secret) {
-    // If no secret is configured, skip verification (not recommended for production)
-    return { valid: true }
-  }
-
-  try {
-    const encoder = new TextEncoder()
-
-    // Import the secret key for HMAC
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    )
-
-    // Sign the message body
-    const signatureBuffer = await crypto.subtle.sign(
-      "HMAC",
-      key,
-      encoder.encode(body),
-    )
-
-    // Convert signature to hex string
-    const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-
-    // Compare signatures (constant-time comparison would be ideal but hex is low-entropy)
-    if (signature.toLowerCase() !== expectedSignature.toLowerCase()) {
-      return { valid: false, error: "Signature mismatch" }
-    }
-
-    return { valid: true }
-  } catch (error) {
-    return {
-      valid: false,
-      error: error instanceof Error ? error.message : "Verification error",
-    }
-  }
+  return verifyPlaidWebhookJWT(body, verificationHeader || "", env)
 }
 
 /**
@@ -198,11 +155,11 @@ export async function processPlaidWebhook(
   body: string,
   signature: string | null,
 ): Promise<WebhookProcessResult> {
-  // Verify the signature
+  // Verify the signature using JWT verification
   const verifyResult = await verifyPlaidWebhook(
     body,
     signature,
-    env.PLAID_WEBHOOK_SECRET || "",
+    env,
   )
 
   if (!verifyResult.valid) {

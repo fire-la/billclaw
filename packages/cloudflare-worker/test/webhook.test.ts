@@ -55,11 +55,10 @@ describe("Webhook Endpoints", () => {
         error?: string
       }
 
-      // Due to the bug mentioned above, verification fails when PLAID_WEBHOOK_SECRET is not set
-      // This test documents the current behavior
-      // TODO: Fix the webhook service to properly skip verification when secret is not configured
+      // JWT verification requires Plaid-Verification header (not Plaid-Signature)
+      // This is the correct behavior - webhook verification fails without the JWT
       expect(body.received).toBe(false)
-      expect(body.error).toBe("Missing Plaid-Signature header")
+      expect(body.error).toBe("Missing Plaid-Verification header")
     })
 
     it("should handle missing webhook data gracefully", async () => {
