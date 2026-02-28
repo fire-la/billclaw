@@ -187,34 +187,58 @@ export async function syncPlaidAccount(
     // Get previous sync state for cursor
     const previousSyncs = await readSyncStates(account.id, storageConfig)
     const lastSync = previousSyncs.find((s) => s.status === "completed")
-    const lastCursor = lastSync?.cursor || undefined
+    const initialCursor = lastSync?.cursor || undefined
 
-    const request: TransactionsSyncRequest = {
-      access_token: account.plaidAccessToken,
-      cursor: lastCursor,
-      count: 500,
+    // PAGINATION: Collect all transactions across all pages
+    let currentCursor = initialCursor
+    let hasMore = true
+    const allAdded: any[] = []
+    const allModified: any[] = []
+    const allRemoved: any[] = []
+
+    while (hasMore) {
+      const request: TransactionsSyncRequest = {
+        access_token: account.plaidAccessToken,
+        cursor: currentCursor,
+        count: 500,
+      }
+
+      // Use retry logic for Plaid API call
+      const axiosResponse = await retryPlaidCall(
+        async () => await plaidClient.transactionsSync(request),
+        3, // max 3 retries
+        logger,
+      )
+      const response: TransactionsSyncResponse = axiosResponse.data
+
+      // Collect transactions from this page
+      allAdded.push(...(response.added || []))
+      allModified.push(...(response.modified || []))
+      allRemoved.push(...(response.removed || []))
+
+      // Update cursor and has_more for next iteration
+      currentCursor = response.next_cursor || ""
+      hasMore = response.has_more || false
+
+      logger.debug?.(
+        `Plaid sync page for ${account.id}: ${allAdded.length} added, ${allModified.length} modified, ${allRemoved.length} removed, hasMore: ${hasMore}`,
+      )
     }
 
-    // Use retry logic for Plaid API call
-    const axiosResponse = await retryPlaidCall(
-      async () => await plaidClient.transactionsSync(request),
-      3, // max 3 retries
-      logger,
-    )
-    const response: TransactionsSyncResponse = axiosResponse.data
-
-    cursor = response.next_cursor || ""
-    const removed = response.removed || []
-    const added = response.added || []
+    // CRITICAL: Only store cursor after ALL pages retrieved
+    // If pagination fails mid-way, must restart from initialCursor
+    cursor = currentCursor
 
     logger.info?.(
-      `Plaid sync for ${account.id}: ${added.length} added, ${removed.length} removed`,
+      `Plaid sync for ${account.id}: ${allAdded.length} added, ${allModified.length} modified, ${allRemoved.length} removed`,
     )
 
-    // Convert transactions
-    const transactions: Transaction[] = added.map((txn) =>
-      convertTransaction(txn, account.id),
-    )
+    // Convert both added AND modified transactions
+    // Modified transactions are pending->posted transitions that need to be updated
+    const transactions: Transaction[] = [
+      ...allAdded.map((txn) => convertTransaction(txn, account.id)),
+      ...allModified.map((txn) => convertTransaction(txn, account.id)),
+    ]
 
     // Deduplicate transactions (24h window)
     const deduplicated = deduplicateTransactions(transactions, 24)
