@@ -50,6 +50,7 @@ playwright/.cache/
 .cache
 .temp
 tmp
+.backup
 
 # ClawHub
 .clawhub/
