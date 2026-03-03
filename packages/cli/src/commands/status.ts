@@ -15,6 +15,7 @@ import {
 import {
   Billclaw,
   getStorageDir,
+  UploadStatusStore,
   type SyncState,
 } from "@firela/billclaw-core"
 import * as fs from "node:fs/promises"
@@ -136,6 +137,7 @@ async function getRecentSyncResults(
 async function runStatus(context: CliContext): Promise<void> {
   const { runtime } = context
   const billclaw = new Billclaw(runtime)
+  const config = await runtime.config.getConfig()
 
   const accounts = await billclaw.getAccounts()
 
@@ -201,6 +203,44 @@ async function runStatus(context: CliContext): Promise<void> {
     `Total: ${totalTransactions} transactions, ${formatBytes(totalSize * 1024)}`,
   )
 
+  // IGN Upload Status (if configured)
+  if (config.ign?.apiToken) {
+    console.log("")
+    console.log("IGN Upload Status")
+
+    const uploadStatusStore = new UploadStatusStore(storageConfig)
+    const uploadTable = createTable({
+      head: ["Account", "Last Upload", "Imported", "Skipped", "Review", "Status"],
+    })
+
+    for (const account of accounts) {
+      const uploadStatus = await uploadStatusStore.readStatus(account.id)
+      if (uploadStatus) {
+        uploadTable.push([
+          account.id,
+          uploadStatus.lastUploadAt
+            ? formatDate(uploadStatus.lastUploadAt)
+            : "Never",
+          uploadStatus.lastUploadResult?.imported?.toString() || "0",
+          uploadStatus.lastUploadResult?.skipped?.toString() || "0",
+          uploadStatus.lastUploadResult?.pendingReview?.toString() || "0",
+          uploadStatus.status,
+        ])
+      } else {
+        uploadTable.push([
+          account.id,
+          "Never",
+          "-",
+          "-",
+          "-",
+          "pending",
+        ])
+      }
+    }
+
+    printTable(uploadTable)
+  }
+
   // Recent Sync Results
   console.log("")
   console.log("Recent Sync Results")
@@ -225,6 +265,16 @@ async function runStatus(context: CliContext): Promise<void> {
     }
 
     printTable(syncTable)
+  }
+
+  // IGN Configuration Section
+  if (config.ign) {
+    console.log("")
+    console.log("IGN Integration:")
+    console.log(`  Region: ${config.ign.region}`)
+    console.log(`  Upload mode: ${config.ign.upload?.mode || "not configured"}`)
+    console.log(`  API URL: ${config.ign.apiUrl}`)
+    console.log(`  Configured: ${config.ign.apiToken ? "Yes" : "No"}`)
   }
 
   // Status summary
