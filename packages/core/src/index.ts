@@ -89,5 +89,8 @@ export * from "./connection/index.js"
 // Relay (WebSocket client for webhook relay service)
 export * from "./relay/index.js"
 
+// Upload (IGN Beancount SaaS integration)
+export * from "./upload/index.js"
+
 // Version
 export const VERSION = "0.0.1" as const
