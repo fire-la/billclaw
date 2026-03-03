@@ -43,7 +43,7 @@ BillClaw uses a **Framework-Agnostic Core + Adapter Pattern** architecture:
 │           ┌──────────┴──────────────────────┐             │
 │           ▼                                 ▼             │
 │    ┌──────────────┐              ┌──────────────┐       │
-│    │  OpenClaw    │              │     CLI      │       │
+│    │  OpenClaw... │              │     CLI      │       │
 │    │  Adapter     │              │   Adapter    │       │
 │    └──────────────┘              └──────────────┘       │
 │           │                                 │             │
