@@ -15,6 +15,7 @@ import rateLimit from "express-rate-limit"
 import { ConfigManager } from "@firela/billclaw-core"
 import { plaidRouter } from "./routes/plaid.js"
 import { gmailRouter } from "./routes/gmail.js"
+import { credentialsRouter } from "./routes/credentials.js"
 import {
   initializeWebhooks,
   setAccountFinder,
@@ -115,6 +116,22 @@ async function startServer() {
   app.use("/oauth/plaid", plaidRouter)
   app.use("/oauth/gmail", gmailRouter)
 
+  // Redirect /oauth/plaid/link to / with session parameter (for Direct mode)
+  app.get("/oauth/plaid/link", (req, res) => {
+    const session = req.query.session
+    if (session) {
+      res.redirect(`/?session=${session}`)
+    } else {
+      res.redirect("/")
+    }
+  })
+
+  // Redirect /gmail.html to /gmail.html with session (for Gmail Direct mode)
+  // Note: gmail.html already handles session extraction from URL
+
+  // Credential polling API (for Direct mode OAuth completion)
+  app.use("/api/connect", credentialsRouter)
+
   // Initialize webhook components
   const plaidSecret = process.env.PLAID_WEBHOOK_SECRET
   await initializeWebhooks(basePath, plaidSecret)
@@ -147,6 +164,10 @@ async function startServer() {
         oauth: {
           plaid: "/oauth/plaid",
           gmail: "/oauth/gmail",
+        },
+        credentials: {
+          session: "/api/connect/session",
+          poll: "/api/connect/credentials/:sessionId",
         },
         webhooks: {
           plaid: "/webhook/plaid",
