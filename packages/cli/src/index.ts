@@ -50,6 +50,9 @@ export async function main(args: string[] = process.argv): Promise<void> {
   try {
     const program = await createProgram()
     await program.parseAsync(args)
+    // Exit successfully after command completion
+    // This ensures the process terminates even if there are pending async operations
+    process.exit(0)
   } catch (error) {
     console.error("CLI error:", error)
     process.exit(1)

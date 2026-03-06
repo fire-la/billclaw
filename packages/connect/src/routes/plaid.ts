@@ -19,6 +19,8 @@ import {
   ConfigManager,
 } from "@firela/billclaw-core"
 
+import { storeCredential } from "./credentials.js"
+
 export const plaidRouter: Router = express.Router()
 
 /**
@@ -61,10 +63,16 @@ plaidRouter.get("/link-token", async (_req, res) => {
  * POST /oauth/plaid/exchange
  *
  * Exchange a Plaid public token for an access token.
+ * Optionally stores credential for Direct mode polling.
+ *
+ * Request body:
+ * - publicToken: Plaid public token (required)
+ * - accountId: Account identifier (optional)
+ * - sessionId: Session ID for credential polling (optional, for Direct mode)
  */
 plaidRouter.post("/exchange", async (req, res) => {
   try {
-    const { publicToken, accountId } = req.body
+    const { publicToken, accountId, sessionId } = req.body
 
     if (!publicToken) {
       return res.status(400).json({
@@ -76,6 +84,15 @@ plaidRouter.post("/exchange", async (req, res) => {
     const configManager = ConfigManager.getInstance()
     const config = await configManager.getServiceConfig("plaid")
     const result = await plaidOAuthHandler(config, publicToken, accountId)
+
+    // Store credential for Direct mode polling if sessionId is provided
+    if (sessionId) {
+      storeCredential(sessionId, {
+        provider: "plaid",
+        publicToken: publicToken,
+        metadata: result.itemId,
+      })
+    }
 
     res.json({
       success: true,

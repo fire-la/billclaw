@@ -26,6 +26,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@firela/api-types':
+        specifier: file:../../../../ign/milestone-v1.2/libs/api-types
+        version: file:../../ign/milestone-v1.2/libs/api-types
       '@firela/billclaw-core':
         specifier: workspace:*
         version: link:../core
@@ -721,6 +724,9 @@ packages:
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
+
+  '@firela/api-types@file:../../ign/milestone-v1.2/libs/api-types':
+    resolution: {directory: ../../ign/milestone-v1.2/libs/api-types, type: directory}
 
   '@hono/zod-validator@0.4.3':
     resolution: {integrity: sha512-xIgMYXDyJ4Hj6ekm9T9Y27s080Nl9NXHcJkOvkXPhubOLj8hZkOL8pDnnXfvCf5xEE8Q4oMFenQUZZREUY2gqQ==}
@@ -3451,6 +3457,8 @@ snapshots:
     optional: true
 
   '@fastify/busboy@2.1.1': {}
+
+  '@firela/api-types@file:../../ign/milestone-v1.2/libs/api-types': {}
 
   '@hono/zod-validator@0.4.3(hono@4.12.3)(zod@3.25.76)':
     dependencies:

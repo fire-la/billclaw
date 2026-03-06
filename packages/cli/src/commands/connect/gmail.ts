@@ -3,6 +3,7 @@
  *
  * Connect Gmail account via OAuth.
  * Default: Relay mode (browser-based via toykit)
+ * Direct mode: Use local Connect service
  * Use --direct-gmail for Device Code Flow (requires own credentials)
  */
 
@@ -17,7 +18,8 @@ import {
   confirmCredentialDeletion,
 } from "@firela/billclaw-core/oauth"
 import { formatUserCode } from "@firela/billclaw-core/utils"
-import { RELAY_URL } from "@firela/billclaw-core/connection"
+import { RELAY_URL, selectConnectionMode } from "@firela/billclaw-core/connection"
+import { randomUUID } from "crypto"
 
 /**
  * Long-polling timeout in seconds
@@ -50,13 +52,166 @@ export async function runGmailConnect(
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━")
   console.log("")
 
-  // Direct mode: Use Device Code Flow
+  // Direct Gmail mode: Use Device Code Flow (requires own credentials)
   if (args.directGmail) {
     return runDirectMode(context, email, timeoutMs)
   }
 
+  // Detect connection mode for OAuth
+  const modeSpinner = new Spinner({ text: "Detecting connection mode..." }).start()
+  const modeSelection = await selectConnectionMode(runtime, "oauth")
+  modeSpinner.succeed(`Using ${modeSelection.mode} mode`)
+
+  if (modeSelection.mode === "direct") {
+    return runDirectConnectMode(context, email, timeoutMs)
+  }
+
   // Default: Relay mode
   return runRelayMode(context, email, timeoutMs)
+}
+
+/**
+ * Run direct mode OAuth flow (via local Connect service)
+ */
+async function runDirectConnectMode(
+  context: CliContext,
+  email?: string,
+  timeoutMs: number = DEFAULT_OAUTH_TIMEOUT,
+): Promise<void> {
+  const { runtime } = context
+
+  // Get public URL from config
+  const config = await runtime.config.getConfig()
+  const publicUrl = config.connect?.publicUrl
+
+  if (!publicUrl) {
+    console.error("Error: connect.publicUrl not configured for Direct mode")
+    console.error("")
+    console.error("Please add the following to your config:")
+    console.error("  connect:")
+    console.error("    publicUrl: http://your-connect-server:4456")
+    console.error("")
+    console.error("Or run without Direct mode to use Relay mode.")
+    process.exit(1)
+  }
+
+  console.log(`Mode: Direct (Connect service at ${publicUrl})`)
+  console.log("")
+
+  // Generate session ID
+  const sessionId = randomUUID()
+  const authorizeUrl = `${publicUrl}/gmail.html?session=${sessionId}`
+
+  console.log("")
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+  console.log("")
+  console.log(`Visit ${authorizeUrl} to authenticate`)
+  console.log("")
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+  console.log("")
+
+  // Open browser
+  const shouldOpenBrowser = process.env.BILLCLAW_OPEN_BROWSER !== "false"
+  if (shouldOpenBrowser) {
+    try {
+      const { default: open } = await import("open")
+      await open(authorizeUrl)
+    } catch {
+      // Browser open failed, user will see URL above
+    }
+  }
+
+  console.log(`Waiting for authorization (timeout: ${Math.floor(timeoutMs / 60000)} minutes)...`)
+  console.log("Press Ctrl+C to cancel")
+  console.log("")
+
+  // Poll for credential
+  const pollSpinner = new Spinner({ text: "Waiting for authorization..." }).start()
+  const pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
+  const startTime = Date.now()
+
+  let tokenData: {
+    access_token: string
+    refresh_token: string
+    expires_in: number
+  } | null = null
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const response = await fetch(pollUrl, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Session not found or expired")
+        }
+        await sleep(2000)
+        continue
+      }
+
+      const data = (await response.json()) as {
+        success: boolean
+        data?: {
+          public_token: string
+          metadata?: string
+        }
+      }
+
+      if (data.success && data.data) {
+        // Parse token JSON (Gmail stores token as JSON in metadata)
+        const accessToken = data.data.public_token
+        const refreshToken = data.data.metadata
+
+        tokenData = {
+          access_token: accessToken,
+          refresh_token: refreshToken || "",
+          expires_in: 3600, // Default 1 hour
+        }
+        break
+      }
+
+      // Credential not ready yet, continue polling
+      await sleep(2000)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+
+      // Terminal errors
+      if (errorMessage.includes("Session not found") || errorMessage.includes("expired")) {
+        throw err
+      }
+
+      // Transient errors: continue polling
+      await sleep(2000)
+    }
+  }
+
+  if (!tokenData) {
+    pollSpinner.fail("Authorization timed out")
+    throw new Error("Authorization timed out. Please try again.")
+  }
+
+  pollSpinner.succeed("Authorization completed!")
+
+  // Save account
+  await saveGmailAccount(runtime, tokenData, email)
+
+  console.log("")
+  success(`Gmail account connected successfully!`)
+  console.log("")
+  console.log("Next steps:")
+  console.log("  billclaw sync --type gmail  - Fetch bills from Gmail")
+  console.log("  billclaw status             - View all accounts")
+}
+
+/**
+ * Sleep for specified milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
@@ -92,10 +247,7 @@ async function runRelayMode(
   console.log("")
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
   console.log("")
-  console.log("  Opening browser for Gmail authorization...")
-  console.log("")
-  console.log(`  If browser doesn't open, visit:`)
-  console.log(`  ${authorizeUrl}`)
+  console.log(`Visit ${authorizeUrl} to authenticate`)
   console.log("")
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
   console.log("")

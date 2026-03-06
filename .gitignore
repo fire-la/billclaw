@@ -58,3 +58,6 @@ tmp
 # Documentation (root level docs, not submodule)
 CLAUDE.md
 docs/
+
+# Playwright auth sessions (NEVER COMMIT)
+playwright/.auth/*.json

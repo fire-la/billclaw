@@ -28,6 +28,7 @@ interface StorageStats {
   accountId: string
   totalTransactions: number
   storageSize: string
+  storageSizeBytes: number
   firstTransaction: string | null
   lastTransaction: string | null
 }
@@ -83,6 +84,7 @@ async function getStorageStats(
     accountId,
     totalTransactions,
     storageSize: formatBytes(totalSize),
+    storageSizeBytes: totalSize,
     firstTransaction,
     lastTransaction,
   }

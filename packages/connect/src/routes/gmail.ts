@@ -19,6 +19,8 @@ import {
   ConfigManager,
 } from "@firela/billclaw-core"
 
+import { storeCredential } from "./credentials.js"
+
 export const gmailRouter: Router = express.Router()
 
 /**
@@ -62,10 +64,17 @@ gmailRouter.get("/authorize", async (req, res) => {
  * POST /oauth/gmail/exchange
  *
  * Exchange a Gmail authorization code for access token.
+ * Optionally stores credential for Direct mode polling.
+ *
+ * Request body:
+ * - code: Authorization code (required)
+ * - state: OAuth state parameter (required)
+ * - redirectUri: Redirect URI (optional)
+ * - sessionId: Session ID for credential polling (optional, for Direct mode)
  */
 gmailRouter.post("/exchange", async (req, res) => {
   try {
-    const { code, state, redirectUri } = req.body
+    const { code, state, redirectUri, sessionId } = req.body
 
     if (!code || !state) {
       const validationError = parseOauthError(
@@ -85,6 +94,15 @@ gmailRouter.post("/exchange", async (req, res) => {
     const configManager = ConfigManager.getInstance()
     const config = await configManager.getServiceConfig("gmail")
     const result = await gmailOAuthHandler(config, { code, state, redirectUri })
+
+    // Store credential for Direct mode polling if sessionId is provided
+    if (sessionId) {
+      storeCredential(sessionId, {
+        provider: "gmail",
+        publicToken: result.accessToken ?? "",
+        metadata: result.refreshToken ?? "",
+      })
+    }
 
     res.json({
       success: true,

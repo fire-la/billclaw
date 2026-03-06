@@ -95,7 +95,7 @@ export async function runPlaidConnect(
   console.log("")
 
   console.log("")
-  console.log(`URL: ${connectUrl}`)
+  console.log(`Visit ${connectUrl} to authenticate`)
   console.log("")
 
   // Open browser
@@ -194,24 +194,80 @@ async function pollForCredential(
   sessionId: string,
   codeVerifier: string | undefined,
   mode: string,
-  _publicUrl?: string,
+  publicUrl?: string,
   timeout: number = DEFAULT_OAUTH_TIMEOUT,
 ): Promise<{ accessToken: string; itemId?: string }> {
   const { runtime } = context
 
-  // Direct mode does not support automatic credential polling
-  // The local Connect service does not have /api/connect/* endpoints
-  // See ADR-007: Direct Mode Manual Completion for OAuth
-  if (mode === "direct") {
-    const directModeError = parseOauthError(
-      { message: "Direct mode does not support automatic credential polling" },
-      { provider: "plaid", operation: "polling", sessionId },
+  // Direct mode: Poll local Connect service
+  if (mode === "direct" && publicUrl) {
+    const startTime = Date.now()
+    const pollUrl = `${publicUrl}/api/connect/credentials/${sessionId}`
+
+    runtime.logger.debug(`Direct mode polling: ${pollUrl}`)
+
+    while (Date.now() - startTime < timeout) {
+      try {
+        const response = await fetch(pollUrl, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            // Session not found - this is unexpected, throw error
+            throw new Error("Session not found or expired")
+          }
+          // Other errors: continue polling
+          runtime.logger.debug(`Poll error: ${response.status}`)
+          await sleep(2000)
+          continue
+        }
+
+        const data = (await response.json()) as {
+          success: boolean
+          data?: {
+            public_token: string
+            metadata?: string
+          }
+        }
+
+        if (data.success && data.data) {
+          // Credential ready
+          return {
+            accessToken: data.data.public_token,
+            itemId: data.data.metadata,
+          }
+        }
+
+        // Credential not ready yet, continue polling
+        runtime.logger.debug(`Credential not ready, waiting...`)
+        await sleep(2000)
+      } catch (error) {
+        const errorMessage = String(error)
+
+        // Terminal errors
+        if (
+          errorMessage.includes("Session not found") ||
+          errorMessage.includes("expired")
+        ) {
+          throw error
+        }
+
+        // Transient errors: continue polling
+        runtime.logger.debug(`Transient error polling for ${sessionId}: ${errorMessage}`)
+        await sleep(2000)
+      }
+    }
+
+    const timeoutError = parseOauthError(
+      { message: "OAuth timed out" },
+      { provider: "plaid", operation: "polling", sessionId, timeout },
     )
-    logError(runtime.logger, directModeError, { operation: "plaid_direct_mode_polling" })
-    throw new Error(
-      "Direct mode does not support automatic credential polling. " +
-        "Please complete the OAuth flow in your browser and manually configure the account.",
-    )
+    logError(runtime.logger, timeoutError, { operation: "plaid_oauth_timeout" })
+    throw timeoutError
   }
 
   // Relay mode: Use PKCE-enabled retrieval
@@ -264,6 +320,13 @@ async function pollForCredential(
   )
   logError(runtime.logger, timeoutError, { operation: "plaid_oauth_timeout" })
   throw timeoutError
+}
+
+/**
+ * Sleep for specified milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**

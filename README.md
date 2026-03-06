@@ -182,47 +182,22 @@ open http://localhost:4456
 
 For real bank authentication (not sandbox), you need an external accessible URL since Plaid callbacks cannot reach `localhost`.
 
-### Quick Setup with ngrok (Testing)
+### Cloudflare Workers (Recommended)
 
-For testing real bank credentials without a domain:
+The easiest way to deploy BillClaw for production use:
 
-```bash
-# 1. Install ngrok
-brew install ngrok  # macOS
-# or download from https://ngrok.com
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/fire-la/billclaw/tree/main/packages/cloudflare-worker)
 
-# 2. Start Connect service
-cd packages/connect
-pnpm build
-node dist/server.js &
-# Service runs on http://localhost:4456
+**Benefits:**
+- Zero infrastructure management
+- Global edge network (300+ locations)
+- Automatic HTTPS
+- Generous free tier
+- One-click deployment
 
-# 3. Start ngrok tunnel (in another terminal)
-ngrok http 4456
-# Output: https://abc123.ngrok.io
+See the [Cloudflare Deployment Guide](./billclaw-docs/docs/guide/cloudflare-deployment.md) for detailed instructions.
 
-# 4. Update config with public URL
-cat > ~/.firela/billclaw/config.json << EOF
-{
-  "version": 1,
-  "connect": {
-    "port": 4456,
-    "host": "localhost",
-    "publicUrl": "https://abc123.ngrok.io"
-  },
-  "plaid": {
-    "clientId": "your_production_client_id",
-    "secret": "your_production_secret",
-    "environment": "development"
-  }
-}
-EOF
-
-# 5. Add redirect URI in Plaid Dashboard
-# https://abc123.ngrok.io/oauth/plaid/callback
-```
-
-### VPS Deployment with HTTPS (Recommended)
+### VPS Deployment with HTTPS (Advanced)
 
 For production use with a custom domain:
 
