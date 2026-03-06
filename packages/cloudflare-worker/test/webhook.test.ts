@@ -30,11 +30,9 @@ describe("Webhook Endpoints", () => {
   })
 
   describe("POST /webhook/plaid", () => {
-    it("should accept webhook without authentication", async () => {
-      // Webhook endpoints use HMAC signature verification, not JWT
-      // When PLAID_WEBHOOK_SECRET is not configured, verification should be skipped
-      // However, there's a bug: env.PLAID_WEBHOOK_SECRET || "" passes empty string,
-      // which fails the !secret check in verifyPlaidWebhook
+    it("should reject webhook without JWT verification header", async () => {
+      // Webhook endpoints use JWT-based verification (Plaid-Verification header)
+      // Without the JWT header, verification fails - this is expected behavior
       const response = await SELF.fetch("http://localhost/webhook/plaid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
