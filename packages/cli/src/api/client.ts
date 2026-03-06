@@ -9,7 +9,7 @@
 import { OpenAPI } from '@firela/api-types';
 
 // Configure the API client
-OpenAPI.BASE = process.env.IGN_API_URL || 'http://localhost:3333/api/v1';
+OpenAPI.BASE = process.env.IGN_API_URL || 'http://localhost:3334/api/v1';
 OpenAPI.TOKEN = process.env.IGN_AUTH_TOKEN || undefined;
 
 // Export configured OpenAPI instance

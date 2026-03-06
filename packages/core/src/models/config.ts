@@ -207,7 +207,7 @@ export type IgnUploadConfig = z.infer<typeof IgnUploadConfigSchema>
  * Allows BillClaw to upload transactions to the IGN platform.
  */
 export const IgnConfigSchema = z.object({
-  apiUrl: z.string().url().default("http://localhost:3000/api/v1"),
+  apiUrl: z.string().url().default("http://localhost:3334/api/v1"),
   apiToken: z.string().optional(),
   region: IgnRegionSchema.default("us"),
   upload: IgnUploadConfigSchema.optional(),
