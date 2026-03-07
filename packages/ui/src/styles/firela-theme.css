@@ -96,3 +96,128 @@
 .btn-gmail:hover:not(:disabled) {
   box-shadow: 0 10px 20px rgba(234, 67, 53, 0.4);
 }
+
+/* Connect Page Styles */
+.connect-page {
+  padding: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.connect-header {
+  margin-bottom: 24px;
+}
+
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.account-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-type-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.account-details h3 {
+  margin: 0;
+}
+
+.account-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-disconnect {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-disconnect:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.btn-disconnect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.connect-actions {
+  margin-top: 32px;
+}
+
+.connect-buttons {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-connect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.btn-connect:hover {
+  transform: translateY(-2px);
+}
+
+.btn-connect.btn-plaid {
+  background: var(--firela-gradient-plaid);
+}
+
+.btn-connect.btn-plaid:hover {
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-connect.btn-gmail {
+  background: #ea4335;
+}
+
+.btn-connect.btn-gmail:hover {
+  box-shadow: 0 10px 20px rgba(234, 67, 53, 0.4);
+}
