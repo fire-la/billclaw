@@ -150,3 +150,37 @@ configRouter.get("/system/status", async (_req, res) => {
     res.status(500).json({ success: false, error: message })
   }
 })
+
+/**
+ * DELETE /api/accounts/:id
+ * Remove an account from configuration
+ */
+configRouter.delete("/accounts/:id", async (req, res) => {
+  try {
+    const { id } = req.params
+    const configManager = ConfigManager.getInstance()
+    const config = await configManager.getConfig()
+
+    if (!config.accounts) {
+      config.accounts = []
+    }
+
+    const accountIndex = config.accounts.findIndex(
+      (account) => account.id === id
+    )
+
+    if (accountIndex === -1) {
+      res.status(404).json({ success: false, error: "Account not found" })
+      return
+    }
+
+    config.accounts.splice(accountIndex, 1)
+    await configManager.updateConfig({ accounts: config.accounts })
+
+    res.status(204).send()
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to delete account"
+    res.status(500).json({ success: false, error: message })
+  }
+})
