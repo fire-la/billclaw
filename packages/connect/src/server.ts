@@ -16,6 +16,7 @@ import { ConfigManager } from "@firela/billclaw-core"
 import { plaidRouter } from "./routes/plaid.js"
 import { gmailRouter } from "./routes/gmail.js"
 import { credentialsRouter } from "./routes/credentials.js"
+import { configRouter } from "./routes/config.js"
 import {
   initializeWebhooks,
   setAccountFinder,
@@ -132,6 +133,9 @@ async function startServer() {
   // Credential polling API (for Direct mode OAuth completion)
   app.use("/api/connect", credentialsRouter)
 
+  // Config API routes (for UI package)
+  app.use("/api", configRouter)
+
   // Initialize webhook components
   const plaidSecret = process.env.PLAID_WEBHOOK_SECRET
   await initializeWebhooks(basePath, plaidSecret)
@@ -164,6 +168,12 @@ async function startServer() {
         oauth: {
           plaid: "/oauth/plaid",
           gmail: "/oauth/gmail",
+        },
+        config: {
+          get: "/api/config",
+          update: "/api/config",
+          accounts: "/api/accounts",
+          systemStatus: "/api/system/status",
         },
         credentials: {
           session: "/api/connect/session",

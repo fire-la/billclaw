@@ -11,7 +11,7 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { logger } from "hono/logger"
 import { authMiddleware } from "./middleware/auth.js"
-import { authRoutes, oauthRoutes, webhookRoutes } from "./routes/index.js"
+import { authRoutes, oauthRoutes, webhookRoutes, configRoutes } from "./routes/index.js"
 import type { Env } from "./types/env.js"
 
 /**
@@ -69,6 +69,12 @@ app.get("/", (c) => {
         verify: "/auth/verify",
         status: "/auth/status",
       },
+      config: {
+        get: "/api/config",
+        update: "/api/config",
+        accounts: "/api/accounts",
+        systemStatus: "/api/system/status",
+      },
       oauth: {
         plaid: {
           linkToken: "/api/oauth/plaid/link-token",
@@ -98,6 +104,9 @@ app.use("/api/*", authMiddleware)
 
 // OAuth routes (requires authentication)
 app.route("/api/oauth", oauthRoutes)
+
+// Config API routes (requires authentication)
+app.route("/api", configRoutes)
 
 // ============================================================================
 // Error Handling
