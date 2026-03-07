@@ -7,19 +7,18 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast, Toaster } from "sonner"
+import { z } from "zod"
 import {
-  FileText,
   FolderOpen,
-  Download,
   Eye,
   RefreshCw,
   AlertCircle,
   CheckCircle,
   XCircle,
+  Play,
 } from "lucide-react"
 import { useConfigStore } from "@/stores/configStore"
 import { createAdapter } from "@/adapters"
-import type { BillclawConfig } from "@firela/billclaw-core"
 import { ExportConfigSchema } from "@firela/billclaw-core"
 
 // Form schema for export settings
@@ -58,7 +57,8 @@ export function ExportPage() {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
+    watch,
+    getValues,
   } = useForm<ExportSettings>({
     resolver: zodResolver(ExportSettingsSchema),
     defaultValues: {

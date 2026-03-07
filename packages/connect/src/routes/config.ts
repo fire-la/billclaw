@@ -186,66 +186,55 @@ configRouter.delete("/accounts/:id", async (req, res) => {
 })
 
 /**
- * POST /api/sync/test
- * Validates sync configuration
+ * POST /api/export/test
+ * Validates export configuration
  */
-configRouter.post("/sync/test", async (req, res) => {
+configRouter.post("/export/test", async (req, res) => {
   try {
-    const { frequency, defaultDateRange, enabledAccounts } = req.body
+    const { format, outputPath, filePrefix } = req.body
 
-    // Validate sync frequency
-    const validFrequencies = [
-      "realtime",
-      "hourly",
-      "daily",
-      "weekly",
-      "manual",
-    ]
-    if (!validFrequencies.includes(frequency)) {
+    // Validate export format
+    const validFormats = ["beancount", "ledger"]
+    if (!validFormats.includes(format)) {
       res.status(400).json({
         success: false,
-        error: "Invalid sync frequency",
+        error: "Invalid export format",
       })
       return
     }
 
-    // Validate date range (positive number)
-    if (
-      typeof defaultDateRange !== "number" ||
-      defaultDateRange < 1 ||
-      defaultDateRange > 365
-    ) {
-      res.status(400).json({
-        success: false,
-        error: "Default date range must be a positive integer between 1 and 365",
-      })
-      return
-    }
-
-    // Check if enabledAccounts is provided
-    if (enabledAccounts && Array.isArray(enabledAccounts)) {
-      if (enabledAccounts.length === 0) {
-        res.status(400).json({
-          success: false,
-          error: "At least one account must be enabled for sync",
-        })
-        return
+    // Validate output path exists and is writable
+    const fs = await import("fs/promises"). {
+      try {
+        await fs.access(outputPath, fs.constants.W_OK)
+      } catch {
+        // Directory doesn't exist, try to create it
+        await fs.mkdir(outputPath, { recursive: true })
       }
     }
 
-    // All validations passed
+    // Validate file prefix is valid filename
+    const validPrefixRegex = /^[a-zA-Z0-9_-]+$/
+    if (!validPrefixRegex.test(filePrefix)) {
+      res.status(400).json({
+        success: false,
+        error: "Invalid file prefix",
+      })
+      return
+    }
+
+    // Try creating test file to verify write permissions
+    const testFilePath = join(outputPath, ".test-write")
+    await fs.writeFile(testFilePath, "test")
+    await fs.unlink(testFilePath)
+
     res.json({
       success: true,
-      message: "Sync configuration is valid",
-      data: {
-        frequency,
-        defaultDateRange,
-        enabledAccounts,
-      },
+      message: "Export configuration is valid",
     })
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to validate sync settings"
+      error instanceof Error ? error.message : "Failed to test configuration"
     res.status(500).json({ success: false, error: message })
   }
 })
