@@ -96,6 +96,13 @@ export class IntegrationTestHelpers {
         port: 4456,
         host: "localhost",
       },
+      export: config.export || {
+        format: "beancount",
+        outputPath: "~/.firela/billclaw/exports",
+        filePrefix: "transactions",
+        includePending: false,
+        currencyColumn: true,
+      },
       ...config,
     }
 

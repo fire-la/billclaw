@@ -184,3 +184,68 @@ configRouter.delete("/accounts/:id", async (req, res) => {
     res.status(500).json({ success: false, error: message })
   }
 })
+
+/**
+ * POST /api/sync/test
+ * Validates sync configuration
+ */
+configRouter.post("/sync/test", async (req, res) => {
+  try {
+    const { frequency, defaultDateRange, enabledAccounts } = req.body
+
+    // Validate sync frequency
+    const validFrequencies = [
+      "realtime",
+      "hourly",
+      "daily",
+      "weekly",
+      "manual",
+    ]
+    if (!validFrequencies.includes(frequency)) {
+      res.status(400).json({
+        success: false,
+        error: "Invalid sync frequency",
+      })
+      return
+    }
+
+    // Validate date range (positive number)
+    if (
+      typeof defaultDateRange !== "number" ||
+      defaultDateRange < 1 ||
+      defaultDateRange > 365
+    ) {
+      res.status(400).json({
+        success: false,
+        error: "Default date range must be a positive integer between 1 and 365",
+      })
+      return
+    }
+
+    // Check if enabledAccounts is provided
+    if (enabledAccounts && Array.isArray(enabledAccounts)) {
+      if (enabledAccounts.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: "At least one account must be enabled for sync",
+        })
+        return
+      }
+    }
+
+    // All validations passed
+    res.json({
+      success: true,
+      message: "Sync configuration is valid",
+      data: {
+        frequency,
+        defaultDateRange,
+        enabledAccounts,
+      },
+    })
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to validate sync settings"
+    res.status(500).json({ success: false, error: message })
+  }
+})

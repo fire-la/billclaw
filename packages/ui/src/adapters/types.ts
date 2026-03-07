@@ -61,6 +61,13 @@ export interface BillclawConfig {
     apiToken?: string // Masked as "***"
     webhookSecret?: string // Masked as "***"
   }
+  export?: {
+    format?: "beancount" | "ledger"
+    outputPath?: string
+    filePrefix?: string
+    includePending?: boolean
+    currencyColumn?: boolean
+  }
   storage?: {
     path?: string
   }

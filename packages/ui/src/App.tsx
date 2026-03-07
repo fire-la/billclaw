@@ -6,6 +6,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ConnectPage } from "@/components/pages/ConnectPage"
+import { SyncPage } from "@/components/pages/SyncPage"
 import { PlaidConnectPage } from "@/components/pages/PlaidConnectPage"
 import { GmailConnectPage } from "@/components/pages/GmailConnectPage"
 
@@ -34,7 +35,7 @@ export function App() {
           path="/sync"
           element={
             <PageLayout>
-              <PlaceholderPage title="Sync Settings" />
+              <SyncPage />
             </PageLayout>
           }
         />

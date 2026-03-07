@@ -300,6 +300,24 @@ export const SyncConfigSchema = z.object({
 export type SyncConfig = z.infer<typeof SyncConfigSchema>
 
 /**
+ * Export format options
+ */
+export const ExportFormatSchema = z.enum(["beancount", "ledger"])
+export type ExportFormat = z.infer<typeof ExportFormatSchema>
+
+/**
+ * Export configuration
+ */
+export const ExportConfigSchema = z.object({
+  format: ExportFormatSchema.default("beancount"),
+  outputPath: z.string().default("~/.firela/billclaw/exports"),
+  filePrefix: z.string().default("transactions"),
+  includePending: z.boolean().default(false),
+  currencyColumn: z.boolean().default(true),
+})
+export type ExportConfig = z.infer<typeof ExportConfigSchema>
+
+/**
  * Main BillClaw configuration schema
  */
 export const BillclawConfigSchema = z.object({
@@ -322,6 +340,7 @@ export const BillclawConfigSchema = z.object({
   gocardless: GoCardlessConfigSchema.optional(),
   gmail: GmailConfigSchema.optional(),
   ign: IgnConfigSchema.optional(),
+  export: ExportConfigSchema.default({}),
   connect: ConnectConfigSchema.default({
     port: 4456,
     host: "localhost",
