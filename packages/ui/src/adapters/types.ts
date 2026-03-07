@@ -12,6 +12,7 @@ export interface Account {
   id: string
   name: string
   type: "plaid" | "gmail"
+  enabled: boolean
   lastSync?: string
   status: "connected" | "disconnected" | "error"
 }
@@ -58,8 +59,17 @@ export interface BillclawConfig {
     refreshToken?: string // Masked as "***"
   }
   ign?: {
+    apiUrl?: string
     apiToken?: string // Masked as "***"
-    webhookSecret?: string // Masked as "***"
+    region?: "cn" | "us" | "eu-core" | "de"
+    upload?: {
+      mode?: "auto" | "manual" | "disabled"
+      sourceAccount?: string
+      defaultCurrency?: string
+      defaultExpenseAccount?: string
+      defaultIncomeAccount?: string
+      filterPending?: boolean
+    }
   }
   export?: {
     format?: "beancount" | "ledger"
@@ -73,6 +83,15 @@ export interface BillclawConfig {
   }
   connect?: {
     publicUrl?: string
+    connection?: {
+      mode?: "auto" | "direct" | "relay" | "polling"
+      healthCheck?: {
+        enabled?: boolean
+        timeout?: number
+        retries?: number
+        retryDelay?: number
+      }
+    }
   }
 }
 
