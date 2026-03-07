@@ -1,0 +1,100 @@
+{
+  "nav": {
+    "connect": "连接账户",
+    "sync": "同步设置",
+    "export": "导出设置",
+    "ign": "IGN 设置",
+    "webhook": "Webhook 设置",
+    "advanced": "高级设置"
+  },
+  "connect": {
+    "title": "已连接账户",
+    "plaid": "银行账户 (Plaid)",
+    "gmail": "邮箱 (Gmail)",
+    "connect": "连接",
+    "disconnect": "断开",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "noAccounts": "暂无已连接账户"
+  },
+  "sync": {
+    "title": "同步设置",
+    "description": "配置交易数据同步设置。",
+    "autoSync": "自动同步",
+    "autoSyncEnabled": "已启用",
+    "autoSyncDisabled": "已禁用",
+    "syncInterval": "同步间隔",
+    "dateRange": "日期范围",
+    "days": "天"
+  },
+  "export": {
+    "title": "导出设置",
+    "description": "配置 Beancount 和 Ledger 格式的数据导出设置。",
+    "format": "导出格式",
+    "beancount": "Beancount",
+    "ledger": "Ledger",
+    "outputDir": "输出目录",
+    "accountMapping": "账户映射"
+  },
+  "ign": {
+    "title": "IGN 设置",
+    "description": "配置 IGN Beancount SaaS 平台集成。",
+    "apiUrl": "API 地址",
+    "apiToken": "API 令牌",
+    "region": "区域",
+    "regions": {
+      "cn": "中国",
+      "us": "美国",
+      "eu-core": "欧盟核心",
+      "de": "德国"
+    },
+    "uploadMode": "上传模式",
+    "uploadModes": {
+      "auto": "自动（同步后）",
+      "manual": "仅手动"
+    }
+  },
+  "webhook": {
+    "title": "Webhook 设置",
+    "description": "配置用于接收更新的 Webhook 连接模式。",
+    "connectionMode": "连接模式",
+    "modes": {
+      "auto": "自动（推荐）",
+      "direct": "直连",
+      "relay": "中继",
+      "polling": "轮询"
+    },
+    "publicUrl": "公网地址",
+    "publicUrlHint": "直连模式必需",
+    "healthCheck": "健康检查",
+    "healthCheckEnabled": "已启用",
+    "healthCheckTimeout": "超时时间（毫秒）"
+  },
+  "advanced": {
+    "title": "高级设置",
+    "description": "高级配置选项。",
+    "logLevel": "日志级别",
+    "logLevels": {
+      "debug": "调试",
+      "info": "信息",
+      "warn": "警告",
+      "error": "错误"
+    },
+    "dataDir": "数据目录",
+    "dataDirHint": "交易数据存储位置"
+  },
+  "common": {
+    "save": "保存更改",
+    "reset": "重置",
+    "saving": "保存中...",
+    "saved": "保存成功",
+    "error": "错误",
+    "loading": "加载中...",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "remove": "移除"
+  }
+}

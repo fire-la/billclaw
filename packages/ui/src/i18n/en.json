@@ -1,0 +1,100 @@
+{
+  "nav": {
+    "connect": "Connect",
+    "sync": "Sync",
+    "export": "Export",
+    "ign": "IGN",
+    "webhook": "Webhook",
+    "advanced": "Advanced"
+  },
+  "connect": {
+    "title": "Connected Accounts",
+    "plaid": "Bank Accounts (Plaid)",
+    "gmail": "Email (Gmail)",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "noAccounts": "No accounts connected"
+  },
+  "sync": {
+    "title": "Sync Settings",
+    "description": "Configure transaction synchronization settings.",
+    "autoSync": "Auto Sync",
+    "autoSyncEnabled": "Enabled",
+    "autoSyncDisabled": "Disabled",
+    "syncInterval": "Sync Interval",
+    "dateRange": "Date Range",
+    "days": "days"
+  },
+  "export": {
+    "title": "Export Settings",
+    "description": "Configure data export settings for Beancount and Ledger formats.",
+    "format": "Export Format",
+    "beancount": "Beancount",
+    "ledger": "Ledger",
+    "outputDir": "Output Directory",
+    "accountMapping": "Account Mapping"
+  },
+  "ign": {
+    "title": "IGN Settings",
+    "description": "Configure integration with IGN Beancount SaaS platform.",
+    "apiUrl": "API URL",
+    "apiToken": "API Token",
+    "region": "Region",
+    "regions": {
+      "cn": "China",
+      "us": "United States",
+      "eu-core": "EU Core",
+      "de": "Germany"
+    },
+    "uploadMode": "Upload Mode",
+    "uploadModes": {
+      "auto": "Auto (after sync)",
+      "manual": "Manual only"
+    }
+  },
+  "webhook": {
+    "title": "Webhook Settings",
+    "description": "Configure webhook connection mode for receiving updates.",
+    "connectionMode": "Connection Mode",
+    "modes": {
+      "auto": "Auto (recommended)",
+      "direct": "Direct",
+      "relay": "Relay",
+      "polling": "Polling"
+    },
+    "publicUrl": "Public URL",
+    "publicUrlHint": "Required for Direct mode",
+    "healthCheck": "Health Check",
+    "healthCheckEnabled": "Enabled",
+    "healthCheckTimeout": "Timeout (ms)"
+  },
+  "advanced": {
+    "title": "Advanced Settings",
+    "description": "Advanced configuration options.",
+    "logLevel": "Log Level",
+    "logLevels": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warning",
+      "error": "Error"
+    },
+    "dataDir": "Data Directory",
+    "dataDirHint": "Where transaction data is stored"
+  },
+  "common": {
+    "save": "Save Changes",
+    "reset": "Reset",
+    "saving": "Saving...",
+    "saved": "Saved successfully",
+    "error": "Error",
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove"
+  }
+}
