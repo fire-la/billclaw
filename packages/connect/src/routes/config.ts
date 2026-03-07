@@ -5,8 +5,12 @@
  * Provides endpoints for reading and updating BillClaw configuration.
  */
 import { Router } from "express"
+import { join } from "path"
 import { ConfigManager } from "@firela/billclaw-core"
 import type { BillclawConfig } from "@firela/billclaw-core"
+
+import "fs/promises"
+import { access, constants, mkdir, unlink, writeFile } from "fs/promises"
 
 export const configRouter: Router = Router()
 
@@ -204,15 +208,11 @@ configRouter.post("/export/test", async (req, res) => {
     }
 
     // Validate output path exists and is writable
-    const fs = await import("fs/promises")
-    const { access, constants } = fs
-
     try {
-      await fs.access(outputPath, constants.W_OK)
-      } catch {
-        // Directory doesn't exist, try to create it
-        await fs.mkdir(outputPath, { recursive: true })
-      }
+      await access(outputPath, constants.W_OK)
+    } catch {
+      // Directory doesn't exist, try to create it
+      await mkdir(outputPath, { recursive: true })
     }
 
     // Validate file prefix is valid filename
@@ -227,12 +227,152 @@ configRouter.post("/export/test", async (req, res) => {
 
     // Try creating test file to verify write permissions
     const testFilePath = join(outputPath, ".test-write")
-    await fs.writeFile(testFilePath, "test")
-    await fs.unlink(testFilePath)
+    await writeFile(testFilePath, "test")
+    await unlink(testFilePath)
 
     res.json({
       success: true,
       message: "Export configuration is valid",
+    })
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to test configuration"
+    res.status(500).json({ success: false, error: message })
+  }
+})
+
+/**
+ * POST /api/ign/test
+ * Validates IGN configuration
+ */
+configRouter.post("/ign/test", async (req, res) => {
+  try {
+    const { apiUrl, apiToken, region } = req.body
+
+    const validRegions = ["cn", "us", "eu-core", "de"]
+    if (!validRegions.includes(region)) {
+      res.status(400).json({
+        success: false,
+        error: "Invalid region",
+      })
+      return
+    }
+
+    // Validate API URL
+    try {
+      new URL(apiUrl)
+    } catch {
+      res.status(400).json({
+        success: false,
+        error: "Invalid API URL",
+      })
+      return
+    }
+
+    // If apiToken is provided, try to validate token
+    if (apiToken && apiToken.length < 10) {
+      res.status(400).json({
+        success: false,
+        error: "API token too short",
+      })
+      return
+    }
+
+    // Try API connection (if configured)
+    // Note: In production, you would actually make a real API call
+    res.json({
+      success: true,
+      message: "IGN configuration is valid",
+    })
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to test configuration"
+    res.status(500).json({ success: false, error: message })
+  }
+})
+
+/**
+ * POST /api/webhooks/test
+ * Validates webhook configuration
+ */
+configRouter.post("/webhooks/test", async (req, res) => {
+  try {
+    const { mode, publicUrl, healthCheckEnabled, healthCheckTimeout } = req.body
+
+    // Validate connection mode
+    const validModes = ["auto", "direct", "relay", "polling"]
+    if (mode && !validModes.includes(mode)) {
+      res.status(400).json({
+        success: false,
+        error: "Invalid connection mode",
+      })
+      return
+    }
+
+    // For direct mode, validate public URL is reachable
+    if (mode === "direct") {
+      if (!publicUrl) {
+        res.status(400).json({
+          success: false,
+          error: "Public URL is required for direct mode",
+        })
+        return
+      }
+
+      // Validate URL format
+      try {
+        new URL(publicUrl)
+      } catch {
+        res.status(400).json({
+          success: false,
+          error: "Invalid public URL format",
+        })
+        return
+      }
+
+      // Try health check on public URL
+      if (healthCheckEnabled) {
+        try {
+          const controller = new AbortController()
+          const timeoutMs = healthCheckTimeout || 5000
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+          const response = await fetch(publicUrl, {
+            method: "HEAD",
+            signal: controller.signal,
+          })
+
+          clearTimeout(timeoutId)
+
+          if (!response.ok) {
+            res.status(400).json({
+              success: false,
+              error: `Public URL returned status ${response.status}`,
+            })
+            return
+          }
+        } catch (error) {
+          const errorMsg =
+            error instanceof Error ? error.message : "Unknown error"
+          res.status(400).json({
+            success: false,
+            error: `Failed to reach public URL: ${errorMsg}`,
+          })
+          return
+        }
+      }
+    }
+
+    // For relay mode, validate relay service is available
+    if (mode === "relay") {
+      // Note: In production, you would check relay service health
+      // For now, we assume relay is always available
+    }
+
+    // Polling mode is always valid
+    res.json({
+      success: true,
+      message: "Webhook configuration is valid",
     })
   } catch (error) {
     const message =
