@@ -204,9 +204,11 @@ configRouter.post("/export/test", async (req, res) => {
     }
 
     // Validate output path exists and is writable
-    const fs = await import("fs/promises"). {
-      try {
-        await fs.access(outputPath, fs.constants.W_OK)
+    const fs = await import("fs/promises")
+    const { access, constants } = fs
+
+    try {
+      await fs.access(outputPath, constants.W_OK)
       } catch {
         // Directory doesn't exist, try to create it
         await fs.mkdir(outputPath, { recursive: true })
