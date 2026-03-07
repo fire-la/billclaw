@@ -35,7 +35,17 @@ async function runUi(
   options?: Record<string, unknown>,
 ): Promise<void> {
   const { runtime } = context
-  const opts = options || {}
+
+  // Extract options from Commander Command object if needed
+  // Commander passes the Command instance as the last parameter
+  let opts: Record<string, unknown>
+  if (options && typeof options === "object" && "opts" in options) {
+    // This is a Commander Command object, extract options using opts()
+    opts = (options as { opts: () => Record<string, unknown> }).opts()
+  } else {
+    opts = options || {}
+  }
+
   const port = parseInt(opts.port as string, 10) || 3000
   const shouldOpen = opts.open !== false
 
@@ -59,27 +69,31 @@ async function runUi(
 
   const server = createServer(app)
 
-  server.listen(port, () => {
-    runtime.logger.info(`BillClaw UI running at http://localhost:${port}`)
+  // Return a promise that resolves when server closes
+  // This keeps the CLI process running until user stops it
+  return new Promise<void>((resolve) => {
+    server.listen(port, () => {
+      runtime.logger.info(`BillClaw UI running at http://localhost:${port}`)
 
-    if (shouldOpen) {
-      open(`http://localhost:${port}`).catch((err) => {
-        runtime.logger.warn(`Failed to open browser: ${err}`)
+      if (shouldOpen) {
+        open(`http://localhost:${port}`).catch((err) => {
+          runtime.logger.warn(`Failed to open browser: ${err}`)
+        })
+      }
+    })
+
+    // Graceful shutdown
+    const shutdown = () => {
+      runtime.logger.info("Shutting down UI server...")
+      server.close(() => {
+        runtime.logger.info("UI server stopped")
+        resolve()
       })
     }
+
+    process.on("SIGINT", shutdown)
+    process.on("SIGTERM", shutdown)
   })
-
-  // Graceful shutdown
-  const shutdown = () => {
-    runtime.logger.info("Shutting down UI server...")
-    server.close(() => {
-      runtime.logger.info("UI server stopped")
-      process.exit(0)
-    })
-  }
-
-  process.on("SIGINT", shutdown)
-  process.on("SIGTERM", shutdown)
 }
 
 /**
