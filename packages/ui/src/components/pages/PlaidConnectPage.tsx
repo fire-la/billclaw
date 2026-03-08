@@ -142,7 +142,7 @@ export function PlaidConnectPage() {
       className="min-h-screen flex items-center justify-center p-5"
       style={{ background: "var(--firela-gradient-plaid)" }}
     >
-      <div className="firela-card">
+      <div className="firela-card" data-testid="plaid-connect-page">
         <div className="text-5xl mb-5">🏦</div>
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
           Connect Your Bank
@@ -152,7 +152,7 @@ export function PlaidConnectPage() {
         </p>
 
         {status === "initializing" && (
-          <div className="status-badge loading">Initializing...</div>
+          <div className="status-badge loading" data-testid="plaid-status">Initializing...</div>
         )}
 
         {status === "ready" && (
@@ -163,6 +163,7 @@ export function PlaidConnectPage() {
               stored on our servers.
             </p>
             <button
+              data-testid="plaid-connect-btn"
               className="btn-firela btn-plaid"
               onClick={handleConnect}
               disabled={!plaidLoaded}
@@ -173,14 +174,14 @@ export function PlaidConnectPage() {
         )}
 
         {status === "connecting" && (
-          <div className="status-badge loading flex items-center justify-center gap-2">
+          <div data-testid="plaid-status" className="status-badge loading flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>Connecting...</span>
           </div>
         )}
 
         {status === "success" && (
-          <div className="status-badge success flex items-center justify-center gap-2">
+          <div data-testid="plaid-status" className="status-badge success flex items-center justify-center gap-2">
             <CheckCircle className="w-5 h-5" />
             <span>Bank account connected successfully!</span>
           </div>

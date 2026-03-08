@@ -100,10 +100,11 @@ export function GmailConnectPage() {
 
   return (
     <div
+      data-testid="gmail-connect-page"
       className="min-h-screen flex items-center justify-center p-5"
       style={{ background: "var(--firela-gradient-gmail)" }}
     >
-      <div className="firela-card">
+      <div className="firela-card" data-testid="gmail-card">
         <div className="text-5xl mb-5">📧</div>
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Connect Gmail</h1>
         <p className="text-gray-600 text-sm mb-8">
@@ -111,7 +112,7 @@ export function GmailConnectPage() {
         </p>
 
         {(status === "authorizing" || status === "exchanging") && (
-          <div className="status-badge loading flex items-center justify-center gap-2">
+          <div data-testid="gmail-status" className="status-badge loading flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>
               {status === "authorizing"
@@ -122,14 +123,14 @@ export function GmailConnectPage() {
         )}
 
         {status === "success" && (
-          <div className="status-badge success flex items-center justify-center gap-2">
+          <div data-testid="gmail-status" className="status-badge success flex items-center justify-center gap-2">
             <CheckCircle className="w-5 h-5" />
             <span>Gmail connected successfully!</span>
           </div>
         )}
 
         {status === "error" && (
-          <div className="status-badge error flex items-center justify-center gap-2">
+          <div data-testid="gmail-status" className="status-badge error flex items-center justify-center gap-2">
             <XCircle className="w-5 h-5" />
             <span>{error || "An error occurred"}</span>
           </div>
@@ -142,7 +143,7 @@ export function GmailConnectPage() {
               extraction. We only read emails with bills and invoices - your
               personal emails remain private.
             </p>
-            <button className="btn-firela btn-gmail" onClick={handleAuthorize}>
+            <button data-testid="gmail-connect-btn" className="btn-firela btn-gmail" onClick={handleAuthorize}>
               Authorize Gmail
             </button>
           </>
